@@ -3,8 +3,11 @@
         "outDir": "./dist/",
         "sourceMap": true,
         "strict": true,
-        "noImplicitReturns": true,
-        "noImplicitAny": true,
+        "noImplicitReturns": false,            // fixme
+        "noImplicitAny": false,                // fixme
+        "noImplicitThis": false,               // fixme
+        "strictPropertyInitialization": false, // fixme
+        "strictNullChecks": false,             // fixme
         "module": "es6",
         "moduleResolution": "node",
         "target": "es5",
