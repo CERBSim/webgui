@@ -1,11 +1,11 @@
 {
-  "name": "empty-project",
-  "version": "1.0.0",
+  "name": "namenotyetdefined",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "LGPL-2.1-or-later",
   "scripts": {
     "clean": "rm dist/bundle.js",
     "build-dev": "webpack --mode development",
@@ -15,7 +15,7 @@
     "@types/dat.gui": "^0.7.6",
     "dat.gui": "^0.7.7",
     "lodash": "^4.17.21",
-    "three": "^0.115"
+    "three": "^0.126.1"
   },
   "devDependencies": {
     "css-loader": "^5.1.3",

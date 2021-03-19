@@ -1,12 +1,16 @@
 const webpack = require('webpack');
 const path = require('path');
 const LodashModuleReplacementPlugin = require('lodash-webpack-plugin');
+var package = require('./package.json');
 
 const config = {
   entry: './src/index.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundle.js'
+    filename: 'bundle.js',
+    library: package.name,
+    libraryTarget: 'umd',
+    globalObject: 'this',
   },
   module: {
     rules: [
