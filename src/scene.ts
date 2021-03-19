@@ -571,7 +571,7 @@ export class Scene {
       arrowid[2*(i*n + j)+0] = 1.0*(j+0.5)/n;
       arrowid[2*(i*n + j)+1] = 1.0*(i+0.5)/n;
     }
-    geo.maxInstancedCount = n*n;
+    geo.instanceCount = n*n;
     geo.setAttribute( 'arrowid', new THREE.InstancedBufferAttribute( arrowid, 2 ) );
     this.animate();
   }
@@ -1387,7 +1387,7 @@ export class Scene {
       for (let i=0; i<o+1; i++)
         geo.setAttribute( pnames[i], new THREE.InstancedBufferAttribute( readB64(data[i]), 4 ) );
 
-      geo.maxInstancedCount = readB64(data[0]).length/4;
+      geo.instanceCount = readB64(data[0]).length/4;
       geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
     }
 
@@ -1412,7 +1412,7 @@ export class Scene {
         for (let i=0;i<vnames.length; i++)
           geo.setAttribute( vnames[i], new THREE.InstancedBufferAttribute( readB64(data[o+1+i]), 2 ) );
 
-      geo.maxInstancedCount = readB64(data[0]).length/4;
+      geo.instanceCount = readB64(data[0]).length/4;
       geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
     }
 
@@ -1442,7 +1442,7 @@ export class Scene {
       for (var i in names)
         geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( readB64(data[i]), 4 ) );
       geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-      geo.maxInstancedCount = readB64(data[0]).length/4;
+      geo.instanceCount = readB64(data[0]).length/4;
     }
 
     if(this.clipping_function_object != null)
@@ -1530,7 +1530,7 @@ export class Scene {
         geo.setAttribute( pnames[i], new THREE.InstancedBufferAttribute( mixB64(data[i], data2[i]), 4 ) );
       }
 
-      geo.maxInstancedCount = readB64(data[0]).length/4;
+      geo.instanceCount = readB64(data[0]).length/4;
       geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
     }
 
@@ -1560,7 +1560,7 @@ export class Scene {
           geo.setAttribute( vnames[i], new THREE.InstancedBufferAttribute( mixB64(data[o+1+i], data2[o+1+i]), 2 ) );
         }
 
-      geo.maxInstancedCount = readB64(data[0]).length/4;
+      geo.instanceCount = readB64(data[0]).length/4;
       geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
     }
 
@@ -1591,7 +1591,7 @@ export class Scene {
       for (var i in names)
         geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( mixB64(data[i], data2[i]), 4 ) );
       geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-      geo.maxInstancedCount = readB64(data[0]).length/4;
+      geo.instanceCount = readB64(data[0]).length/4;
     }
 
     if(this.clipping_function_object != null)
