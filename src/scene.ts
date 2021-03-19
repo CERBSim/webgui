@@ -1170,27 +1170,7 @@ export class Scene {
 
     if(this.funcdim>0 && this.colormap_object == null)
       {
-        var geo = new THREE.Geometry();
-        geo.vertices.push(new THREE.Vector3( 0,   0, 0.0));
-        geo.vertices.push(new THREE.Vector3( 0,-0.07, 0.0));
-        geo.vertices.push(new THREE.Vector3( 1,-0.07, 0.0));
-        geo.vertices.push(new THREE.Vector3( 1,   0, 0.0));
-        geo.faces.push(new THREE.Face3(0, 1, 2));
-        geo.faces.push(new THREE.Face3(2, 3, 0));
-
-        geo.faceVertexUvs[0] = [];
-        geo.faceVertexUvs[0].push([
-          new THREE.Vector2(0, 0),
-          new THREE.Vector2(0, 0),
-          new THREE.Vector2(1, 0)
-        ]);
-        geo.faceVertexUvs[0].push([
-          new THREE.Vector2(1, 0),
-          new THREE.Vector2(1, 0),
-          new THREE.Vector2(0, 0)
-        ]);
-
-        geo.uvsNeedUpdate = true;
+        var geo = new THREE.PlaneGeometry(1., 0.07).translate(0.5,0,0);
         var material = new THREE.MeshBasicMaterial({depthTest: false, map: this.colormap_texture, side: THREE.DoubleSide, wireframe: false});
         this.colormap_object = new THREE.Mesh( geo, material );
 
