@@ -10,9 +10,13 @@
         "strictNullChecks": false,             // fixme
         "module": "es6",
         "moduleResolution": "node",
-        "target": "es5",
+        "target": "es6",
         "allowJs": true,
     },
+    "lib": [
+      "es2016",
+      "dom"
+    ],
     "include": [
         "./src/**/*"
     ]

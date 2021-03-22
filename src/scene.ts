@@ -6,10 +6,13 @@ import {
   shaders
 } from './shaders';
 
+import { Grid3D }  from './grid';
+
 import * as THREE from 'three';
 // import Stats from "https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min";
 import * as dat from 'dat.gui';
 
+export {THREE};
 
 function readB64(base64) {
   var binary_string = window.atob(base64);
@@ -376,6 +379,7 @@ export class Scene {
   clipping_vectors_object: THREE.Mesh;
   axes_object: any;
   center_tag: any;
+  grid: any;
 
   is_complex: boolean;
   context: any;
@@ -764,6 +768,14 @@ export class Scene {
     let gui_status = this.gui_status;
     console.log("gui_status", gui_status);
     let animate = ()=>this.animate();
+
+    // var planeGeom = new THREE.PlaneBufferGeometry(10, 5, 10, 5);
+    // console.log("planegeom", planeGeom);
+    // var gridPlane = new THREE.LineSegments(planeGeom, new THREE.LineBasicMaterial({color: "black"}));
+    // console.log("gridplane", gridPlane);
+
+    // const grid = new THREE.GridHelper( 400, 40, 0x0000ff, 0x808080 );
+
 
     if(render_data.show_wireframe)
     {
@@ -1366,6 +1378,9 @@ export class Scene {
   {
     this.render_data = render_data;
     this.setRenderData(render_data);
+    console.log("wireframe", this.wireframe_object, this.wireframe_object.geometry);
+    this.grid = Grid3D(this.container, this.wireframe_object.geometry.boundingSphere);
+    this.pivot.add(this.grid);
   }
 
   setRenderData(render_data)
@@ -1728,6 +1743,8 @@ export class Scene {
       return; // not fully initialized yet
 
     this.handleEvent('beforerender', [this, frame_time]);
+
+    this.grid.updateLabelPositions( this.container, this.camera, this.pivot.matrix );
 
     let gui_status = this.gui_status;
     let uniforms = this.uniforms;
