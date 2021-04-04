@@ -2,7 +2,7 @@
   "name": "webgui",
   "version": "0.0.2",
   "description": "",
-  "main": "index.js",
+  "main": "dist/webgui.js",
   "keywords": [],
   "author": "",
   "license": "LGPL-2.1-or-later",
