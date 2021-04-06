@@ -205,10 +205,9 @@ class PlaneGridWithLabels extends THREE.Group {
     super.add ( new THREE.Mesh(mesh_geo, mesh_mat) );
   }
 
-  updateLabelPositions( canvas, camera, matrix ) {
+  updateLabelPositions( canvas, camera, matrix, visible ) {
     var vector = new THREE.Vector3();
     const rect = canvas.getBoundingClientRect();
-    console.log("rect", rect)
 
     for(let {el, p} of this.labels)
       {
@@ -221,14 +220,11 @@ class PlaneGridWithLabels extends THREE.Group {
         const x = Math.round( (   vector.x + 1 ) * rect.width  / 2 );
         const y = Math.round( ( - vector.y + 1 ) * rect.height / 2 );
 
-        if(y<rect.top || y>rect.bottom || x>rect.right || x<rect.left)
-          {
-          el.style.visible = false;
-          }
+        if(visible && (y<rect.top || y>rect.bottom || x>rect.right || x<rect.left))
+          el.style.display = "block";
         else
-          {
-          el.style.visible = true;
-          }
+          el.style.display = "none";
+
         el.style.top  = `${y}px`;
         el.style.left = `${x}px`;
       }
@@ -307,7 +303,7 @@ export function Grid3D ( parent, bounding_sphere) {
 
   group.updateLabelPositions = (canvas, camera, matrix) => {
     for(const p of planes)
-      p.updateLabelPositions(canvas, camera, matrix);
+      p.updateLabelPositions(canvas, camera, matrix, group.visible);
   };
   return group;
 }

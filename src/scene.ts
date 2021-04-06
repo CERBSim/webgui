@@ -1381,6 +1381,7 @@ export class Scene {
     console.log("wireframe", this.wireframe_object, this.wireframe_object.geometry);
     this.grid = Grid3D(this.container, this.wireframe_object.geometry.boundingSphere);
     this.pivot.add(this.grid);
+    this.grid.visible = false;
   }
 
   setRenderData(render_data)
