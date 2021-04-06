@@ -1,33 +1,23 @@
-# empty-project
+# Webgui
 
-Empty project.
+Webgui is a THREE.js based visualization library for grid-based functions, especially for finite element meshes and functions. It was developed for the open source finite element software [Netgen/NGSolve](https://github.com/NGSolve/ngsolve.git).
 
-## Building and running on localhost
+## Building
 
 First install dependencies:
 
 ```sh
-npm install
+yarn
 ```
 
 To create a production build:
 
 ```sh
-npm run build-prod
+yarn build-prod
 ```
 
 To create a development build:
 
 ```sh
-npm run build-dev
+yarn build-dev
 ```
-
-## Running
-
-```sh
-node dist/bundle.js
-```
-
-## Credits
-
-Made with [createapp.dev](https://createapp.dev/)
