@@ -157,6 +157,30 @@ let CameraControls = function(cameraObject, scene, domElement) {
     };
   }();
 
+  this.loadSettings = function () {
+      return function( settings ) {
+          scope.transmat.copy( settings.transmat );
+          scope.rotmat.copy( settings.rotmat );
+          scope.centermat.copy( settings.centermat );
+          scope.transformationmat.copy( settings.transformationmat );
+          scope.scale = settings.scale;
+          scope.center.copy(settings.center);
+          scope.update();
+          scope.scene.setCenterTag();
+      };
+  }();
+
+  this.storeSettings = function () {
+      return function( settings ) {
+          settings.transmat = scope.transmat;
+          settings.rotmat = scope.rotmat;
+          settings.centermat = scope.centermat;
+          settings.transformationmat = scope.transformationmat;
+          settings.scale = scope.scale;
+          settings.center = scope.center;
+      };
+  }();
+
   function keydown(event) {
     var needs_update = false;
 
@@ -452,10 +476,18 @@ export class Scene {
       handlers[i].apply(null, args);
   }
 
+  getGuiSettings() {
+      const settings = JSON.parse(JSON.stringify(this.gui_status)); // deep-copy settings
+      this.controls.storeSettings( settings );
+      return JSON.parse(JSON.stringify(settings));
+  }
 
   setGuiSettings (settings) {
-    console.log("in gui settings");
     setKeys(this.gui_status, settings);
+
+    if(settings.camera)
+        this.controls.loadSettings( settings.camera );
+
     // stats.showPanel(parseInt(this.gui_status.Misc.stats));
     for (var i in this.gui.__controllers)
       this.gui.__controllers[i].updateDisplay();
