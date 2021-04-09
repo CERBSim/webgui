@@ -608,6 +608,7 @@ export class Scene {
       arrowid[2*(i*n + j)+1] = 1.0*(i+0.5)/n;
     }
     geo.instanceCount = n*n;
+    geo._maxInstanceCount = n*n;
     geo.setAttribute( 'arrowid', new THREE.InstancedBufferAttribute( arrowid, 2 ) );
     this.animate();
   }
@@ -1332,7 +1333,13 @@ export class Scene {
     });
 
 
-    const geo = new THREE.InstancedBufferGeometry().fromGeometry(new THREE.ConeGeometry(0.5, 1, 10));
+    const geo = new THREE.InstancedBufferGeometry();
+    const cone = new THREE.ConeGeometry(0.5, 1, 10)
+    geo.setIndex( cone.getIndex() );
+    geo.setAttribute( 'position', cone.getAttribute('position') );
+    geo.setAttribute( 'normal', cone.getAttribute('normal') );
+    geo.setAttribute( 'uv', cone.getAttribute('uv') );
+
     var mesh = new THREE.Mesh(geo, material);
     mesh.frustumCulled = false;
     return mesh;
