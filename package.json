@@ -8,8 +8,9 @@
   "license": "LGPL-2.1-or-later",
   "scripts": {
     "clean": "rm dist/bundle.js",
-    "build-dev": "webpack --mode development",
-    "build-prod": "webpack --mode production"
+    "build-shaders": "node build_shaders.js",
+    "build-dev": "yarn run build-shaders && webpack --mode development",
+    "build-prod": "yarn run build-shaders && webpack --mode production"
   },
   "dependencies": {
     "@types/dat.gui": "^0.7.6",
