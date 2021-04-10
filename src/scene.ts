@@ -698,6 +698,7 @@ export class Scene {
       colormap_min: -1.0,
       colormap_max: 1.0,
       deformation: 0.0,
+      show_grid: false,
       Multidim: { t: 0.0, multidim: 0, animate: false, speed: 2 },
       Complex: { phase: 0.0, deform: 0.0, animate: false, speed: 2 },
       Clipping: { enable: false, function: true, x: 0.0, y: 0.0, z: 1.0, dist: 0.0 },
@@ -1417,10 +1418,9 @@ export class Scene {
   {
     this.render_data = render_data;
     this.setRenderData(render_data);
-    console.log("wireframe", this.wireframe_object, this.wireframe_object.geometry);
     this.grid = Grid3D(this.container, this.wireframe_object.geometry.boundingSphere);
     this.pivot.add(this.grid);
-    this.grid.visible = false;
+    this.grid.visible = this.gui_status.show_grid;
   }
 
   setRenderData(render_data)
@@ -1784,8 +1784,6 @@ export class Scene {
 
     this.handleEvent('beforerender', [this, frame_time]);
 
-    this.grid.updateLabelPositions( this.container, this.camera, this.pivot.matrix );
-
     let gui_status = this.gui_status;
     let uniforms = this.uniforms;
 
@@ -1827,6 +1825,10 @@ export class Scene {
       }
     }
 
+    if( this.grid != null ) {
+      this.grid.visible = this.gui_status.show_grid;
+      this.grid.updateLabelPositions( this.container, this.camera, this.pivot.matrix );
+    }
 
     if( this.clipping_function_object != null )
     {
