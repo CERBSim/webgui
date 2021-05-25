@@ -706,6 +706,10 @@ export class Scene {
       Vectors: { show: false, grid_size: 10, offset: 0.0 },
       Misc: { stats: "-1", reduce_subdivision: false, "version": true, "axes": true, "colormap": true },
     };
+
+    if(Math.max(render_data.order2d, render_data.order3d)<=1)
+        this.gui_status_default.subdivision=1;
+
     this.gui_status = JSON.parse(JSON.stringify(this.gui_status_default)); // deep-copy settings
     this.gui_functions = { };
 
