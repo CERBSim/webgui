@@ -7,7 +7,7 @@
   "author": "",
   "license": "LGPL-2.1-or-later",
   "scripts": {
-    "clean": "rm dist/bundle.js",
+    "clean": "rm dist/webgui.js",
     "build-shaders": "node build_shaders.js",
     "build-dev": "yarn run build-shaders && webpack --mode development",
     "build-prod": "yarn run build-shaders && webpack --mode production"
