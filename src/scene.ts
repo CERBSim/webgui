@@ -673,6 +673,8 @@ export class Scene extends WebGLScene {
     this.clipping_plane = new THREE.Vector4(0,0,1,0);
     let uniforms = this.uniforms;
     uniforms.clipping_plane = new THREE.Uniform( this.clipping_plane ); 
+    uniforms.highlight_selected_face = new THREE.Uniform( false );
+    uniforms.selected_face = new THREE.Uniform( -1 );
     // should cliping plane in pivot world be calculated in shader insted of passing it? 
     //currently not done because it is needed here anyways
 
@@ -715,13 +717,13 @@ export class Scene extends WebGLScene {
     // const grid = new THREE.GridHelper( 400, 40, 0x0000ff, 0x808080 );
 
 
+    uniforms.n_segments = new THREE.Uniform(5);
     if(render_data.show_wireframe)
     {
       this.edges_object = this.createCurvedWireframe(render_data);
       this.pivot.add(this.edges_object);
       this.wireframe_object = this.createCurvedWireframe(render_data);
       this.pivot.add(this.wireframe_object);
-      uniforms.n_segments = new THREE.Uniform(5);
       gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
       gui.add(gui_status, "edges").onChange(animate);
       gui.add(gui_status, "mesh").onChange(animate);
@@ -908,9 +910,11 @@ export class Scene extends WebGLScene {
 
     if(this.mesh_only)
     {
+        this.gui_status_default.colormap_min = -0.5;
+        this.gui_status_default.colormap_max = render_data.mesh_regions_2d-0.5;
         gui_status.colormap_min = -0.5;
         gui_status.colormap_max = render_data.mesh_regions_2d-0.5;
-        this.setSelectedFaces();
+        // this.setSelectedFaces();
     }
     uniforms.colormap_min = new THREE.Uniform( gui_status.colormap_min );
     uniforms.colormap_max = new THREE.Uniform( gui_status.colormap_max );
@@ -1075,48 +1079,70 @@ export class Scene extends WebGLScene {
 
   updateColormap( )
   {
-    var n_colors = this.gui_status.colormap_ncolors;
-    var colormap_data = new Float32Array(3*n_colors);
+    if(this.mesh_only) {
+        console.log("update colormap for mesh");
+        // Drawing only a mesh -> colors are given explicitly in render data (or just use green)
+        var n_colors = this.render_data.mesh_regions_2d;
+        var colormap_data = new Float32Array(3*n_colors);
 
-    var col_blue = new THREE.Vector3(0,0,1);
-    var col_cyan = new THREE.Vector3(0,1,1);
-    var col_green = new THREE.Vector3(0,1,0);
-    var col_yellow = new THREE.Vector3(1,1,0);
-    var col_red = new THREE.Vector3(1,0,0);
+        for (var i=0; i<3*n_colors; i++)
+            colormap_data[i] = 0.8;
 
-    for (var i=0; i<n_colors; i++)
-    {
-      let x = 1.0/(n_colors-1) * i;
-      let hx, color;
-      if (x < 0.25)
-      {
-        hx = 4.0*x;
-        color = col_blue.clone().multiplyScalar(1.0-hx).addScaledVector(col_cyan, hx);
-      }
-      else if (x < 0.5)
-      {
-        hx = 4.0*x-1.0;
-        color = col_cyan.clone().multiplyScalar(1.0-hx).addScaledVector(col_green, hx);
-      }
-      else if (x < 0.75)
-      {
-        hx = 4.0*x-2.0;
-        color = col_green.clone().multiplyScalar(1.0-hx).addScaledVector(col_yellow, hx);
-      }
-      else
-      {
-        hx = 4.0*x-3.0;
-        color = col_yellow.clone().multiplyScalar(1.0-hx).addScaledVector(col_red, hx);
-      }
-      colormap_data[3*i+0] = color.x;
-      colormap_data[3*i+1] = color.y;
-      colormap_data[3*i+2] = color.z;
+        const colors = this.render_data.colors;
+        if(colors) {
+          for (var i=0; i<colors.length; i++)
+              for (var k=0; k<3; k++)
+                  colormap_data[3*i+k] = colors[i][k];
+        }
+        this.colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
+        this.colormap_texture.magFilter = THREE.NearestFilter;
+        this.colormap_texture.needsUpdate = true;
+        this.uniforms.tex_colormap = { value: this.colormap_texture};
     }
+    else {
+        var n_colors = this.gui_status.colormap_ncolors;
+        var colormap_data = new Float32Array(3*n_colors);
 
-    this.colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
-    this.colormap_texture.magFilter = THREE.NearestFilter;
-    this.colormap_texture.needsUpdate = true;
-    this.uniforms.tex_colormap = { value: this.colormap_texture};
+        var col_blue = new THREE.Vector3(0,0,1);
+        var col_cyan = new THREE.Vector3(0,1,1);
+        var col_green = new THREE.Vector3(0,1,0);
+        var col_yellow = new THREE.Vector3(1,1,0);
+        var col_red = new THREE.Vector3(1,0,0);
+
+        for (var i=0; i<n_colors; i++)
+        {
+          let x = 1.0/(n_colors-1) * i;
+          let hx, color;
+          if (x < 0.25)
+          {
+            hx = 4.0*x;
+            color = col_blue.clone().multiplyScalar(1.0-hx).addScaledVector(col_cyan, hx);
+          }
+          else if (x < 0.5)
+          {
+            hx = 4.0*x-1.0;
+            color = col_cyan.clone().multiplyScalar(1.0-hx).addScaledVector(col_green, hx);
+          }
+          else if (x < 0.75)
+          {
+            hx = 4.0*x-2.0;
+            color = col_green.clone().multiplyScalar(1.0-hx).addScaledVector(col_yellow, hx);
+          }
+          else
+          {
+            hx = 4.0*x-3.0;
+            color = col_yellow.clone().multiplyScalar(1.0-hx).addScaledVector(col_red, hx);
+          }
+          colormap_data[3*i+0] = color.x;
+          colormap_data[3*i+1] = color.y;
+          colormap_data[3*i+2] = color.z;
+        }
+
+        this.colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
+        this.colormap_texture.magFilter = THREE.NearestFilter;
+        this.colormap_texture.needsUpdate = true;
+        this.uniforms.tex_colormap = { value: this.colormap_texture};
+    }
 
     if(this.funcdim>0 && this.colormap_object == null)
       {
@@ -1322,9 +1348,9 @@ export class Scene extends WebGLScene {
   {
     this.render_data = render_data;
     this.setRenderData(render_data);
-    this.grid = Grid3D(this.container, this.wireframe_object.geometry.boundingSphere);
-    this.pivot.add(this.grid);
-    this.grid.visible = this.gui_status.show_grid;
+    // this.grid = Grid3D(this.container, this.wireframe_object.geometry.boundingSphere);
+    // this.pivot.add(this.grid);
+    // this.grid.visible = this.gui_status.show_grid;
   }
 
   setRenderData(render_data)
@@ -1655,7 +1681,6 @@ export class Scene extends WebGLScene {
       this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));
       this.renderer.clear(true, true, true);
       this.renderer.render( this.scene, this.camera );
-      this.camera.clearViewOffset();
       this.uniforms.render_depth.value= false;
 
       let pixel_buffer = new Float32Array( 4 );
@@ -1667,10 +1692,27 @@ export class Scene extends WebGLScene {
           this.controls.center.setComponent(i, (pixel_buffer[i]-this.trafo.y)/this.trafo.x);
         }
       }
+      {
+          const function_mode = this.uniforms.function_mode.value = 4;
+          this.uniforms.function_mode.value = 4;
+          // render again to get function value (face index for mesh rendering)
+          this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));
+          this.renderer.clear(true, true, true);
+          this.renderer.render( this.scene, this.camera );
+          this.context.readPixels(0, 0, 1, 1, this.context.RGBA, this.context.FLOAT, pixel_buffer);
+          this.uniforms.function_mode.value = function_mode;
+          const face = Math.round(pixel_buffer[0]);
+          console.log("you clicked on face", face, "with name", this.render_data.names[face]);
+          this.uniforms.highlight_selected_face.value = true;
+          this.uniforms.selected_face.value = face;
+      }
+      this.camera.clearViewOffset();
+
       this.setCenterTag(this.controls.center);
       this.handleEvent('selectpoint', [this, this.controls.center] );
       this.mouse.set(0.0, 0.0);
       this.get_pixel = false;
+
     }
 
     this.requestId = 0;
