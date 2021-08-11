@@ -3,8 +3,12 @@ import {
 } from './version';
 
 import {
-  shaders
-} from './shaders';
+  WebGLScene,
+  getCookie,
+  getShader,
+  readB64,
+  setKeys,
+} from './utils';
 
 import { Grid3D }  from './grid';
 
@@ -13,66 +17,6 @@ import * as THREE from 'three';
 import * as dat from 'dat.gui';
 
 export {THREE};
-
-function readB64(base64) {
-  var binary_string = window.atob(base64);
-  var len = binary_string.length;
-  var bytes = new Uint8Array(len);
-  for (var i = 0; i < len; i++) {
-    bytes[i] = binary_string.charCodeAt(i);
-  }
-  return new Float32Array( bytes.buffer );
-}
-
-function setKeys (dst, src) {
-  for(var key in dst) {
-    if(typeof(dst[key])=="object" && src[key] !== undefined)
-      setKeys(dst[key], src[key]);
-    else
-      {
-        dst[key] = src[key];
-      }
-  }
-}
-
-function getShader(name, defines = {}, user_eval_function = null)
-{
-  defines = {...defines}; // copy dictionary
-  if(name.endsWith(".vert"))
-    defines["VERTEX_SHADER"] = true;
-  if(name.endsWith(".frag"))
-    defines["FRAGMENT_SHADER"] = true;
-
-  if(user_eval_function)
-    defines["USER_FUNCTION"] = user_eval_function;
-
-  var s ="";
-  var nl = String.fromCharCode(10); // avoid escape characters
-  for(var key in defines)
-    s += "#define " + key + " " + defines[key] + nl;
-
-
-  var utils = window.atob(shaders['utils.h']);
-  var shader = window.atob(shaders[name]).trim();
-  return s + "// START FILE: utils.h"+nl + utils +nl+"// START FILE: " + name + nl + shader;
-}
-
-
-function getCookie(cname) {
-  var name = cname + "=";
-  var decodedCookie = decodeURIComponent(document.cookie);
-  var ca = decodedCookie.split(';');
-  for(var i = 0; i <ca.length; i++) {
-    var c = ca[i];
-    while (c.charAt(0) == ' ') {
-      c = c.substring(1);
-    }
-    if (c.indexOf(name) == 0) {
-      return c.substring(name.length, c.length);
-    }
-  }
-  return "";
-}
 
 let CameraControls = function(cameraObject, scene, domElement) {
   if ( domElement === undefined ) console.log( 'domElement is undefined' );
@@ -372,10 +316,9 @@ let CameraControls = function(cameraObject, scene, domElement) {
 
 
 
-export class Scene {
+export class Scene extends WebGLScene {
   render_data: any;
   scene: THREE.Scene;
-  renderer: THREE.WebGLRenderer;
   camera: THREE.PerspectiveCamera;
   ortho_camera: THREE.OrthographicCamera;
   clipping_plane: THREE.Vector4;
@@ -384,7 +327,6 @@ export class Scene {
   light_dir: THREE.Vector3;
   colormap_divs: any;
   colormap_labels: any;
-  container: any;
   stats: any;
   event_handlers: any;
 
@@ -406,9 +348,7 @@ export class Scene {
   grid: any;
 
   is_complex: boolean;
-  context: any;
   trafo: any;
-  render_target: any;
   mouse: THREE.Vector2;
   get_pixel: boolean;
 
@@ -428,9 +368,6 @@ export class Scene {
   mesh_center: THREE.Vector3;
   mesh_radius: number;
 
-  requestId: number;
-  have_webgl2: boolean;
-
   pivot: THREE.Group;
 
   have_deformation: boolean;
@@ -438,7 +375,6 @@ export class Scene {
   label_style: string;
 
   controls: any;
-  element: any;
 
   funcdim: number;
   mesh_only: boolean;
@@ -450,12 +386,12 @@ export class Scene {
   colormap_texture: any;
 
   constructor() {
+    super();
     this.have_webgl2 = false;
 
     this.label_style  = '-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; onselectstart="return false;';
     this.label_style += 'onmousedown="return false; user-select:none;-o-user-select:none;unselectable="on";';
     this.label_style += 'position: absolute; z-index: 1; display:block;';
-    this.requestId = 0;
     this.event_handlers = {};
   }
 
@@ -635,43 +571,7 @@ export class Scene {
 
   initCanvas (element, webgl_args)
   {
-    this.element = element;
-    var canvas = document.createElement( 'canvas' );
-
-    var gl2 = canvas.getContext('webgl2');
-
-    if (gl2) {
-      console.log('webgl2 is supported!');
-      this.context = canvas.getContext( 'webgl2', { alpha: false, ...webgl_args } );
-      this.have_webgl2 = true;
-    }
-    else
-    {
-      console.log('your browser/OS/drivers do not support WebGL2');
-      this.context = canvas.getContext( 'webgl', { alpha: false, ...webgl_args } );
-    }
-
-    this.renderer = new THREE.WebGLRenderer( { canvas: canvas, context: this.context } );
-    this.renderer.autoClear = false;
-    console.log("Renderer", this.renderer);
-
-    this.render_target = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight );
-    this.render_target.texture.format = THREE.RGBAFormat;
-    this.render_target.texture.type = THREE.FloatType;
-
-    //this is to get the correct pixel detail on portable devices
-    this.renderer.setPixelRatio( window.devicePixelRatio );
-    // renderer.domElement.addEventListener("click", console.log, true)
-
-    //and this sets the canvas' size.
-    this.renderer.setSize( this.element.offsetWidth, this.element.offsetHeight );
-    this.renderer.setClearColor( 0xffffff, 1 );
-
-    this.container = document.createElement( 'div' );
-    element.appendChild( this.container );
-
-    this.container.appendChild( this.renderer.domElement );
-
+    WebGLScene.prototype.initCanvas.call(this, element, webgl_args);
     // label with NGSolve version at right lower corner
     this.version_object = document.createElement("div");
     var style = 'bottom: 10px; right: 10px';
@@ -1742,14 +1642,6 @@ export class Scene {
     }
   }
 
-
-  animate () {
-    // Don't request a frame if another one is currently in the pipeline
-    if(this.requestId === 0)
-      this.requestId = requestAnimationFrame( ()=>this.render() );
-
-    //   stats.update();
-  }
 
   render() {
     let now = new Date().getTime();
