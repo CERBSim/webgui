@@ -173,6 +173,7 @@ let CameraControls = function(cameraObject, scene, domElement) {
   }
 
   function onMouseDown(event) {
+      scope.did_move = false;
     if(event.button==0) {
       event.preventDefault();
       scope.mode = "rotate";
@@ -187,11 +188,20 @@ let CameraControls = function(cameraObject, scene, domElement) {
   function onMouseUp(event) {
     scope.mode = null;
     scope.dispatchEvent( changeEvent );
+
+    if(!scope.did_move) {
+      event.preventDefault();
+      var rect = scope.domElement.getBoundingClientRect();
+      scope.scene.mouse.set(event.clientX-rect.left, event.clientY-rect.top);
+      scene.get_face_index = true;
+      scope.dispatchEvent( changeEvent );      
+    }
   }
 
 
   function onMouseMove(event) {
     var needs_update = false;
+    scope.did_move = true;
 
     if(scope.mode=="rotate")
       {
@@ -200,17 +210,18 @@ let CameraControls = function(cameraObject, scene, domElement) {
         scope.rotateObject(new THREE.Vector3(0, 1, 0), 0.01*event.movementX);
       }
 
-      if(scope.mode=="move")
-        {
-          needs_update = true;
-          scope.panObject(new THREE.Vector3(1, 0, 0), 0.004*event.movementX);
-          scope.panObject(new THREE.Vector3(0, -1, 0), 0.004*event.movementY);
-        }
+    if(scope.mode=="move")
+      {
+        needs_update = true;
+        scope.panObject(new THREE.Vector3(1, 0, 0), 0.004*event.movementX);
+        scope.panObject(new THREE.Vector3(0, -1, 0), 0.004*event.movementY);
+      }
 
-        if(needs_update) {
-          event.preventDefault();
-          scope.update();
-        }
+    if(needs_update) {
+      event.preventDefault();
+      scope.update();
+    }
+
   }
 
   var oldtouch = new THREE.Vector2(0,0);
@@ -273,10 +284,6 @@ let CameraControls = function(cameraObject, scene, domElement) {
 
   function contextmenu( event ) {
     event.preventDefault();
-  }
-
-  function getPixel(scene, mouse){
-
   }
 
   function onDblClick( event ){
@@ -384,6 +391,8 @@ export class Scene extends WebGLScene {
   c_eval: any;
 
   colormap_texture: any;
+
+  get_face_index: boolean;
 
   constructor() {
     super();
@@ -905,8 +914,8 @@ export class Scene extends WebGLScene {
         this.setStepSize(cmin, cmax);
 
       gui.add(gui_status, "colormap_ncolors", 2, 32,1).onChange(()=>{this.updateColormap(); this.animate();});
-      this.updateColormap();
     }
+    this.updateColormap();
 
     if(this.mesh_only)
     {
@@ -1085,8 +1094,12 @@ export class Scene extends WebGLScene {
         var n_colors = this.render_data.mesh_regions_2d;
         var colormap_data = new Float32Array(3*n_colors);
 
-        for (var i=0; i<3*n_colors; i++)
-            colormap_data[i] = 0.8;
+        for (var i=0; i<3*n_colors; i++) {
+            if(i%3==1)
+                colormap_data[i] = 1.0;
+            else
+                colormap_data[i] = 0.0;
+        }
 
         const colors = this.render_data.colors;
         if(colors) {
@@ -1668,11 +1681,54 @@ export class Scene extends WebGLScene {
     }
   }
 
+  getFaceIndexAtCursor() {
+    let face = -1;
+    if(this.mesh_only) {
+        const pixels = new Float32Array(4);
+        const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
+        var rect = this.canvas.getBoundingClientRect();
+        const x = this.mouse.x;
+        const y = this.mouse.y;
+
+        // render face index to texture (for mouse selection)
+        const function_mode = this.uniforms.function_mode.value;
+        this.uniforms.function_mode.value = 4;
+        // render again to get function value (face index for mesh rendering)
+        this.camera.setViewOffset( this.renderer.domElement.width, this.renderer.domElement.height,
+          x * window.devicePixelRatio | 0, y * window.devicePixelRatio | 0, 1, 1 );
+        this.renderer.setRenderTarget(render_target);
+        this.renderer.setClearColor( new THREE.Color(-1.0,-1.0,-1.0));
+        this.renderer.clear(true, true, true);
+        this.renderer.render( this.mesh_object, this.camera );
+        const gl = this.context;
+        this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
+        face = Math.round(pixels[0]);
+        if(face>=0) {
+            this.uniforms.highlight_selected_face.value = true;
+            this.uniforms.selected_face.value = face;
+            let name = "";
+            if(this.render_data.names && this.render_data.names.length>face)
+                name = this.render_data.names[face];
+            console.log("you clicked on face", face, "with name", name);
+        }
+        else
+            this.uniforms.highlight_selected_face.value = false;
+
+        this.camera.clearViewOffset();
+        this.uniforms.function_mode.value = function_mode;
+    }
+    return face;
+  }
+
 
   render() {
     let now = new Date().getTime();
     let frame_time = 0.001*(new Date().getTime() - this.last_frame_time );
 
+    if (this.get_face_index) {
+        this.getFaceIndexAtCursor();
+        this.get_face_index = false;
+    }
     if (this.get_pixel) {
       this.uniforms.render_depth.value = true;
       this.camera.setViewOffset( this.renderer.domElement.width, this.renderer.domElement.height,
@@ -1691,20 +1747,6 @@ export class Scene extends WebGLScene {
         for (var i=0; i<3; i++){
           this.controls.center.setComponent(i, (pixel_buffer[i]-this.trafo.y)/this.trafo.x);
         }
-      }
-      {
-          const function_mode = this.uniforms.function_mode.value = 4;
-          this.uniforms.function_mode.value = 4;
-          // render again to get function value (face index for mesh rendering)
-          this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));
-          this.renderer.clear(true, true, true);
-          this.renderer.render( this.scene, this.camera );
-          this.context.readPixels(0, 0, 1, 1, this.context.RGBA, this.context.FLOAT, pixel_buffer);
-          this.uniforms.function_mode.value = function_mode;
-          const face = Math.round(pixel_buffer[0]);
-          console.log("you clicked on face", face, "with name", this.render_data.names[face]);
-          this.uniforms.highlight_selected_face.value = true;
-          this.uniforms.selected_face.value = face;
       }
       this.camera.clearViewOffset();
 

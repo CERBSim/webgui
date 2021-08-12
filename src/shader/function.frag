@@ -21,14 +21,14 @@ void main()
   value = userFunction(value_, p_, normal_);
 #endif // USER_FUNCTION
 
+  if( isBehindClippingPlane(p_) )
+    discard;
+
   if(function_mode == 4.0)
   {
     gl_FragColor = vec4(value, 1.0);
     return;
   }
-
-  if( isBehindClippingPlane(p_) )
-    discard;
 
   if (render_depth) {
       gl_FragColor = getPositionAsColor(p_);
