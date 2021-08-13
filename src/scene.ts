@@ -1764,7 +1764,6 @@ export class Scene extends WebGLScene {
         this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
         const index = Math.round(pixels[1]);
         const dim = Math.round(pixels[0]);
-        console.log("pixels", pixels);
         if(index>=0 && dim>0) {
             this.uniforms.highlight_selected_face.value = dim;
             this.uniforms.selected_face.value = index;
