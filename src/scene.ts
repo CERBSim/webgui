@@ -742,6 +742,7 @@ export class Scene extends WebGLScene {
       this.edges_object = this.createThickEdges(render_data);
       this.pivot.add(this.edges_object);
       gui.add(gui_status, "line_thickness", 1,20,1).onChange(animate);
+      gui.add(gui_status, "edges").onChange(animate);
     }
 
     if(render_data.show_wireframe && render_data.Bezier_points.length)
@@ -749,7 +750,6 @@ export class Scene extends WebGLScene {
       this.wireframe_object = this.createCurvedWireframe(render_data);
       this.pivot.add(this.wireframe_object);
       gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
-      gui.add(gui_status, "edges").onChange(animate);
       gui.add(gui_status, "mesh").onChange(animate);
     }
 
@@ -1756,17 +1756,19 @@ export class Scene extends WebGLScene {
         this.renderer.setRenderTarget(render_target);
         this.renderer.setClearColor( new THREE.Color(-1.0,-1.0,-1.0));
         this.renderer.clear(true, true, true);
-        this.renderer.render( this.edges_object, this.camera );
+        this.renderer.render( this.mesh_object, this.camera );
+        // this.renderer.render( this.edges_object, this.camera );
         const gl = this.context;
         this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
         face = Math.round(pixels[0]);
+        // console.log("pixels", pixels);
         if(face>=0) {
             this.uniforms.highlight_selected_face.value = true;
             this.uniforms.selected_face.value = face;
             let name = "";
             if(this.render_data.names && this.render_data.names.length>face)
                 name = this.render_data.names[face];
-            console.log("you clicked on face", face, "with name", name);
+            console.log("selected face", face, "with name", name);
         }
         else
             this.uniforms.highlight_selected_face.value = false;
@@ -1783,10 +1785,6 @@ export class Scene extends WebGLScene {
     let frame_time = 0.001*(new Date().getTime() - this.last_frame_time );
     // this.context.lineWidth(5.0);
 
-    if (this.get_face_index) {
-        this.getFaceIndexAtCursor();
-        this.get_face_index = false;
-    }
     if (this.get_pixel) {
       this.uniforms.render_depth.value = true;
       this.camera.setViewOffset( this.renderer.domElement.width, this.renderer.domElement.height,
@@ -1941,6 +1939,11 @@ export class Scene extends WebGLScene {
     uniforms.light_mat.value.y = gui_status.Light.diffuse;
     uniforms.light_mat.value.z = gui_status.Light.shininess;
     uniforms.light_mat.value.w = gui_status.Light.specularity;
+
+    if (this.get_face_index) {
+        this.getFaceIndexAtCursor();
+        this.get_face_index = false;
+    }
 
     this.renderer.setRenderTarget(null);
     this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));
