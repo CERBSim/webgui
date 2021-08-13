@@ -745,7 +745,7 @@ export class Scene extends WebGLScene {
       gui.add(gui_status, "edges").onChange(animate);
     }
 
-    if(render_data.show_wireframe && render_data.Bezier_points.length)
+    if(render_data.show_wireframe && render_data.Bezier_points.length>0)
     {
       this.wireframe_object = this.createCurvedWireframe(render_data);
       this.pivot.add(this.wireframe_object);
@@ -1738,37 +1738,49 @@ export class Scene extends WebGLScene {
     }
   }
 
-  getFaceIndexAtCursor() {
-    let face = -1;
+  getIndexAtCursor() {
+    let index = -1;
     if(this.mesh_only) {
         const pixels = new Float32Array(4);
         const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
+        const h = this.renderer.domElement.height;
         var rect = this.canvas.getBoundingClientRect();
         const x = this.mouse.x;
         const y = this.mouse.y;
 
         // render face index to texture (for mouse selection)
         const function_mode = this.uniforms.function_mode.value;
-        this.uniforms.function_mode.value = 4;
+        this.uniforms.function_mode.value = 7;
         // render again to get function value (face index for mesh rendering)
         this.camera.setViewOffset( this.renderer.domElement.width, this.renderer.domElement.height,
           x * window.devicePixelRatio | 0, y * window.devicePixelRatio | 0, 1, 1 );
         this.renderer.setRenderTarget(render_target);
         this.renderer.setClearColor( new THREE.Color(-1.0,-1.0,-1.0));
         this.renderer.clear(true, true, true);
-        this.renderer.render( this.mesh_object, this.camera );
-        // this.renderer.render( this.edges_object, this.camera );
+        this.uniforms.line_thickness.value = this.gui_status.line_thickness*4;
+        this.renderer.render( this.pivot, this.camera );
+        this.uniforms.line_thickness.value = this.gui_status.line_thickness/h;
         const gl = this.context;
         this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
-        face = Math.round(pixels[0]);
-        // console.log("pixels", pixels);
-        if(face>=0) {
-            this.uniforms.highlight_selected_face.value = true;
-            this.uniforms.selected_face.value = face;
+        const index = Math.round(pixels[1]);
+        const dim = Math.round(pixels[0]);
+        console.log("pixels", pixels);
+        if(index>=0 && dim>0) {
+            this.uniforms.highlight_selected_face.value = dim;
+            this.uniforms.selected_face.value = index;
             let name = "";
-            if(this.render_data.names && this.render_data.names.length>face)
-                name = this.render_data.names[face];
-            console.log("selected face", face, "with name", name);
+            if(dim==1)
+            {
+                if(this.render_data.edge_names && this.render_data.edge_names.length>index)
+                    name = this.render_data.edge_names[index];
+                console.log("selected edge", index, "with name", name);
+            }
+            else if(dim==2)
+            {
+                if(this.render_data.names && this.render_data.names.length>index)
+                    name = this.render_data.names[index];
+                console.log("selected face", index, "with name", name);
+            }
         }
         else
             this.uniforms.highlight_selected_face.value = false;
@@ -1776,14 +1788,13 @@ export class Scene extends WebGLScene {
         this.camera.clearViewOffset();
         this.uniforms.function_mode.value = function_mode;
     }
-    return face;
+    return index;
   }
 
 
   render() {
     let now = new Date().getTime();
     let frame_time = 0.001*(new Date().getTime() - this.last_frame_time );
-    // this.context.lineWidth(5.0);
 
     if (this.get_pixel) {
       this.uniforms.render_depth.value = true;
@@ -1941,7 +1952,7 @@ export class Scene extends WebGLScene {
     uniforms.light_mat.value.w = gui_status.Light.specularity;
 
     if (this.get_face_index) {
-        this.getFaceIndexAtCursor();
+        this.getIndexAtCursor();
         this.get_face_index = false;
     }
 

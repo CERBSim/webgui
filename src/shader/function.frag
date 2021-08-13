@@ -5,7 +5,7 @@ varying vec3 value_;
 uniform bool render_depth;
 
 uniform int selected_face;
-uniform bool highlight_selected_face;
+uniform int highlight_selected_face;
 
 #ifdef USER_FUNCTION
 vec3 userFunction( vec3 value, vec3 p, vec3 normal )
@@ -30,6 +30,13 @@ void main()
     return;
   }
 
+  if(function_mode == 7.0)
+  {
+    gl_FragColor = vec4(2, value_.x, value_.y, 1.0);
+    return;
+  }
+
+
   if (render_depth) {
       gl_FragColor = getPositionAsColor(p_);
       return;
@@ -53,7 +60,7 @@ void main()
 
   gl_FragColor = calcLight( color, p_, norm, inside);
 
-  if(highlight_selected_face && selected_face == int(value_.x+0.5))
+  if(highlight_selected_face==2 && selected_face == int(value_.x+0.5))
       gl_FragColor = gl_FragColor + vec4(0.3,0.3,0.3,0);
 
 
