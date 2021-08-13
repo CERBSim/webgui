@@ -737,14 +737,18 @@ export class Scene extends WebGLScene {
 
 
     uniforms.n_segments = new THREE.Uniform(5);
-    if(render_data.show_wireframe)
+    if(render_data.edges.length)
     {
       this.edges_object = this.createThickEdges(render_data);
       this.pivot.add(this.edges_object);
+      gui.add(gui_status, "line_thickness", 1,20,1).onChange(animate);
+    }
+
+    if(render_data.show_wireframe && render_data.Bezier_points.length)
+    {
       this.wireframe_object = this.createCurvedWireframe(render_data);
       this.pivot.add(this.wireframe_object);
       gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
-      gui.add(gui_status, "line_thickness", 1,20,1).onChange(animate);
       gui.add(gui_status, "edges").onChange(animate);
       gui.add(gui_status, "mesh").onChange(animate);
     }
