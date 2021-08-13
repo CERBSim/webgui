@@ -393,6 +393,7 @@ export class Scene extends WebGLScene {
   colormap_texture: any;
 
   get_face_index: boolean;
+  index_render_target: any;
 
   constructor() {
     super();
@@ -478,10 +479,16 @@ export class Scene extends WebGLScene {
         }
       }
       this.camera.aspect = aspect;
+      this.uniforms.aspect.value = aspect;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize( w, h );
       this.controls.update();
       this.animate();
+
+
+      // this.index_render_target = 
+      //   const pixels = new Float32Array(4);
+      //   const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
   }
 
   updateColormapLabels()
@@ -608,6 +615,7 @@ export class Scene extends WebGLScene {
       colormap_max: 1.0,
       deformation: 0.0,
       show_grid: false,
+      line_thickness: 5,
       Multidim: { t: 0.0, multidim: 0, animate: false, speed: 2 },
       Complex: { phase: 0.0, deform: 0.0, animate: false, speed: 2 },
       Clipping: { enable: false, function: true, x: 0.0, y: 0.0, z: 1.0, dist: 0.0 },
@@ -681,6 +689,8 @@ export class Scene extends WebGLScene {
 
     this.clipping_plane = new THREE.Vector4(0,0,1,0);
     let uniforms = this.uniforms;
+    uniforms.aspect = new THREE.Uniform( this.camera.aspect ); 
+    uniforms.line_thickness = new THREE.Uniform( 0.001 ); 
     uniforms.clipping_plane = new THREE.Uniform( this.clipping_plane ); 
     uniforms.highlight_selected_face = new THREE.Uniform( false );
     uniforms.selected_face = new THREE.Uniform( -1 );
@@ -729,11 +739,12 @@ export class Scene extends WebGLScene {
     uniforms.n_segments = new THREE.Uniform(5);
     if(render_data.show_wireframe)
     {
-      this.edges_object = this.createCurvedWireframe(render_data);
+      this.edges_object = this.createThickEdges(render_data);
       this.pivot.add(this.edges_object);
       this.wireframe_object = this.createCurvedWireframe(render_data);
       this.pivot.add(this.wireframe_object);
       gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
+      gui.add(gui_status, "line_thickness", 1,20,1).onChange(animate);
       gui.add(gui_status, "edges").onChange(animate);
       gui.add(gui_status, "mesh").onChange(animate);
     }
@@ -1267,6 +1278,48 @@ export class Scene extends WebGLScene {
   }
 
 
+  createThickEdges(data)
+  {
+    var geo = new THREE.InstancedBufferGeometry();
+
+    var inst = new Float32Array(21*2*3*2); // 20 = max value of n_segments, 2 trigs per segment, 2 coordinates
+    for (var i=0; i <= 20; i++)
+    {
+        const i0 = 12*i;
+        inst[i0+ 0] = i;
+        inst[i0+ 2] = i;
+        inst[i0+ 4] = i+1;
+        inst[i0+ 6] = i+1;
+        inst[i0+ 8] = i+1;
+        inst[i0+10] = i;
+
+        inst[i0+ 1] =  1;
+        inst[i0+ 3] = -1;
+        inst[i0+ 5] = -1;
+        inst[i0+ 7] = -1;
+        inst[i0+ 9] =  1;
+        inst[i0+11] =  1;
+    }
+
+    geo.setAttribute( 'position', new THREE.Float32BufferAttribute( inst, 2 ));
+
+    let defines = Object({ORDER: data.order2d});
+    if(this.have_deformation)
+      defines.DEFORMATION = 1;
+    else if(this.have_z_deformation)
+      defines.DEFORMATION_2D = 1;
+    defines.THICK_LINES = 1;
+    var wireframe_material = new THREE.RawShaderMaterial({
+      vertexShader: getShader( 'splines.vert', defines ),
+      fragmentShader: getShader( 'splines.frag', defines ),
+      uniforms: this.uniforms
+    });
+
+    var wireframe = new THREE.Mesh( geo, wireframe_material );
+    return wireframe;
+  }
+
+
   createClippingVectors(data)
   {
     var material = new THREE.RawShaderMaterial({
@@ -1699,7 +1752,7 @@ export class Scene extends WebGLScene {
         this.renderer.setRenderTarget(render_target);
         this.renderer.setClearColor( new THREE.Color(-1.0,-1.0,-1.0));
         this.renderer.clear(true, true, true);
-        this.renderer.render( this.mesh_object, this.camera );
+        this.renderer.render( this.edges_object, this.camera );
         const gl = this.context;
         this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
         face = Math.round(pixels[0]);
@@ -1724,6 +1777,7 @@ export class Scene extends WebGLScene {
   render() {
     let now = new Date().getTime();
     let frame_time = 0.001*(new Date().getTime() - this.last_frame_time );
+    // this.context.lineWidth(5.0);
 
     if (this.get_face_index) {
         this.getFaceIndexAtCursor();
@@ -1767,6 +1821,9 @@ export class Scene extends WebGLScene {
     let gui_status = this.gui_status;
     let uniforms = this.uniforms;
 
+    const h = this.renderer.domElement.height;
+    uniforms.line_thickness.value = gui_status.line_thickness/h;
+
     this.axes_object.visible = gui_status.Misc.axes;
     var subdivision = gui_status.subdivision;
     if(gui_status.Misc.reduce_subdivision && this.controls.mode != null)
@@ -1779,7 +1836,7 @@ export class Scene extends WebGLScene {
       {
         uniforms.n_segments.value = subdivision;
         let geo = <THREE.BufferGeometry>this.edges_object.geometry;
-        geo.setDrawRange(0, subdivision+1);
+        geo.setDrawRange(0, 6*subdivision);
       }
     }
 
