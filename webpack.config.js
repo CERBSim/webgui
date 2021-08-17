@@ -19,7 +19,6 @@ function getConfig() {
                 {
                     test: /\.ts(x)?$/,
                     loader: 'ts-loader',
-                    exclude: /node_modules/
                 },
                 {
                     test: /\.css$/,
