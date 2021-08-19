@@ -11,7 +11,7 @@ function getConfig() {
             path: path.resolve(__dirname, 'dist'),
             filename: 'webgui.js',
             library: package.name,
-            libraryTarget: 'umd',
+            libraryTarget: 'amd',
             globalObject: 'this',
         },
         module: {
@@ -36,16 +36,12 @@ function getConfig() {
                 '.js'
             ]
         },
+        optimization: {
+            minimize: true,
+        }
     };
 }
 
-var html_config = getConfig();
-html_config.output.filename = "webgui_external_three.js";
-html_config.externals = {
-'@jupyter-widgets/base': '@jupyter-widgets/base',
-    three: [`https://unpkg.com/three@${three_version}/build/three.min.js`, "THREE"],
-};
-
 module.exports = [
-    getConfig(), html_config
+    getConfig()
 ];
