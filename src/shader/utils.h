@@ -71,7 +71,7 @@ vec3 GetNormal(float u, float v)
 {
 #ifdef HAVE_NORMALS
   float w = 1.0-u-v;
-  return u*n0 + v*n1 + w*n2;
+  return normalize(u*n0 + v*n1 + w*n2);
 #else // HAVE_NORMALS
   vec4 du = p1-p0;
   vec4 dv = p2-p0;
