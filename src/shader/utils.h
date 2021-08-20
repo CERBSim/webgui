@@ -55,6 +55,11 @@ attribute vec2 v0;
 attribute vec2 v1;
 attribute vec2 v2;
 
+#ifdef HAVE_NORMALS
+attribute vec3 n0;
+attribute vec3 n1;
+attribute vec3 n2;
+#endif // HAVE_NORMALS
 
 vec4 GetPositionAndScalar(float u, float v)
 {
@@ -64,9 +69,14 @@ vec4 GetPositionAndScalar(float u, float v)
 
 vec3 GetNormal(float u, float v)
 {
+#ifdef HAVE_NORMALS
+  float w = 1.0-u-v;
+  return u*n0 + v*n1 + w*n2;
+#else // HAVE_NORMALS
   vec4 du = p1-p0;
   vec4 dv = p2-p0;
   return normalize(cross(du.xyz, dv.xyz));
+#endif // HAVE_NORMALS
 }
 
 vec2 GetVectorValues(float u, float v)

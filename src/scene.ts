@@ -1233,6 +1233,8 @@ export class Scene extends WebGLScene {
     geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
 
     var defines = Object({MESH_2D: 1, ORDER:data.order2d});
+    if(data.have_normals)
+        defines.HAVE_NORMALS=1;
     if(this.have_deformation)
       defines.DEFORMATION = 1;
     else if(this.have_z_deformation)
@@ -1496,6 +1498,10 @@ export class Scene extends WebGLScene {
 
       for (var i in names)
         geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( readB64(data[i]), 4 ) );
+
+      if(render_data.have_normals)
+          for (let i=0; i<3; i++)
+              geo.setAttribute( 'n'+i, new THREE.InstancedBufferAttribute( readB64(data[3+i]), 3 ) );
       geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
       geo.instanceCount = readB64(data[0]).length/4;
     }
