@@ -10,7 +10,7 @@ import {
   setKeys,
 } from './utils';
 
-import { Grid3D }  from './grid';
+import { Grid3D, Label3D }  from './grid';
 
 import * as THREE from 'three';
 // import Stats from "https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min";
@@ -71,6 +71,22 @@ let CameraControls = function(cameraObject, scene, domElement) {
       scope.pivotObject.matrix.copy(scope.transmat).multiply(scope.rotmat).scale(scale_vec).multiply(scope.centermat);
       const aspect = this.domElement.offsetWidth/this.domElement.offsetHeight;
       this.scene.axes_object.matrixWorld.makeTranslation(-0.85*aspect, -0.85, 0).multiply(scope.rotmat);
+
+      let vector = new THREE.Vector3();
+      const rect = this.scene.canvas.getBoundingClientRect();
+      for(let {el, p} of this.scene.labels) {
+      if(this.scene.ortho_camera) {
+        vector.copy(p).applyMatrix4(this.scene.axes_object.matrixWorld);
+        vector.project( this.scene.ortho_camera );
+        // map to 2D screen space
+        const x = Math.round( (   vector.x + 1 ) * rect.width  / 2 );
+        const y = Math.round( ( - vector.y + 1 ) * rect.height / 2 );
+        el.style.display = "block";
+        el.style.top  = `${y}px`;
+        el.style.left = `${x}px`;
+        }
+      }
+
       scope.dispatchEvent( changeEvent );
     };  
   }()
@@ -324,6 +340,9 @@ let CameraControls = function(cameraObject, scene, domElement) {
 
 
 export class Scene extends WebGLScene {
+
+  labels: any;
+
   render_data: any;
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -672,6 +691,11 @@ export class Scene extends WebGLScene {
     //   this.scene.background = new THREE.Color(0x292c2e);
     this.axes_object = new THREE.AxesHelper(0.15);
     this.axes_object.matrixAutoUpdate = false;
+    this.labels = [];
+    const s = 0.20;
+    this.labels.push( Label3D( this.container, new THREE.Vector3(s,0,0), "X" ) );
+    this.labels.push( Label3D( this.container, new THREE.Vector3(0,s,0), "Y" ) );
+    this.labels.push( Label3D( this.container, new THREE.Vector3(0,0,s), "Z" ) );
 
     this.pivot = new THREE.Group();
     this.pivot.matrixAutoUpdate = false;
@@ -1068,6 +1092,7 @@ export class Scene extends WebGLScene {
       var on_init = Function("scene", "render_data", render_data.on_init);
       on_init(this, render_data);
     }
+    this.controls.update();
     this.animate();
   }
 

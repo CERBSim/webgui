@@ -25,7 +25,7 @@ function toString( x ) {
 }
 
 
-function Label3D (  parent, p, text ) {
+export function Label3D (  parent, p, text ) {
 
   /*
   const instance :any = new TextSprite({
