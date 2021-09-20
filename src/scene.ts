@@ -16,6 +16,8 @@ import * as THREE from 'three';
 // import Stats from "https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min";
 import * as dat from 'dat.gui';
 
+const css = require('./styles.css');
+
 export {THREE};
 
 let CameraControls = function(cameraObject, scene, domElement) {

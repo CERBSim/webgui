@@ -24,6 +24,7 @@ function toString( x ) {
   return x.toPrecision(2);
 }
 
+const css = require('./styles.css');
 
 export function Label3D (  parent, p, text ) {
 
@@ -56,13 +57,7 @@ export function Label3D (  parent, p, text ) {
 
   parent.appendChild(element);
 
-  let style = '-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; onselectstart="return false;';
-  style += 'onmousedown="return false; user-select:none;-o-user-select:none;unselectable="on";';
-  style += 'position: absolute; z-index: 1; display:block; translate(-50%, -50%);';
-
-  element.style.cssText = style; //("style", style);
-  element.setAttribute("style", style);
-  // element.style.transform = "translate(-50%, -50%);";
+  element.classList.add('label3d');
   element.style.top = '0px';
   element.style.left = '0px';
 

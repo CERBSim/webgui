@@ -1,4 +1,11 @@
-h1 {
-  color: white;
-  background-color: black;
+.label3d {
+  -moz-user-select: none;
+  -ms-user-select:none;
+  -o-user-select:none;
+  -webkit-user-select: none;
+  display:block;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  user-select:none;
+  z-index: 1;
 }
