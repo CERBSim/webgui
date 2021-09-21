@@ -1827,10 +1827,10 @@ export class Scene extends WebGLScene {
                     name = this.render_data.names[index];
             }
             if(text!="") {
-                text += " ${index}";
+                text += ` ${index}`;
                 if(name=="")
                     name = "(no name)"
-                text += "\n ${name}";
+                text += `\n ${name}`;
                 this.tooltip.textContent = text;
                 this.tooltip.style.visibility = "visible";
                 this.tooltip.style.left = `${x}px`;
