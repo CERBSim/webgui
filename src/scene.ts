@@ -344,6 +344,7 @@ let CameraControls = function(cameraObject, scene, domElement) {
 export class Scene extends WebGLScene {
 
   labels: any;
+  tooltip: any;
 
   render_data: any;
   scene: THREE.Scene;
@@ -698,6 +699,18 @@ export class Scene extends WebGLScene {
     this.labels.push( Label3D( this.container, new THREE.Vector3(s,0,0), "X" ) );
     this.labels.push( Label3D( this.container, new THREE.Vector3(0,s,0), "Y" ) );
     this.labels.push( Label3D( this.container, new THREE.Vector3(0,0,s), "Z" ) );
+
+    this.tooltip = document.createElement("div");
+    var el_text = document.createTextNode("tooltip");
+    this.tooltip.appendChild(el_text)
+
+    this.container.appendChild(this.tooltip);
+
+    this.tooltip.classList.add('tooltiptext');
+    this.tooltip.style.top = '10px';
+    this.tooltip.style.left = '10px';
+    this.tooltip.style.visibility = 'visible';
+    console.log("tooltip", this.tooltip);
 
     this.pivot = new THREE.Group();
     this.pivot.matrixAutoUpdate = false;
@@ -1806,16 +1819,25 @@ export class Scene extends WebGLScene {
                 if(this.render_data.edge_names && this.render_data.edge_names.length>index)
                     name = this.render_data.edge_names[index];
                 console.log("selected edge", index, "with name", name);
+                this.tooltip.textContent = "Edge " + index + " with name " + name;
+                this.tooltip.style.visibility = "visible";
             }
             else if(dim==2)
             {
                 if(this.render_data.names && this.render_data.names.length>index)
                     name = this.render_data.names[index];
                 console.log("selected face", index, "with name", name);
+                this.tooltip.textContent = "Face " + index + " with name " + name;
+                this.tooltip.style.visibility = "visible";
             }
+            this.tooltip.style.left = `${x}px`;
+            this.tooltip.style.top = `${y}px`;
         }
         else
+        {
             this.uniforms.highlight_selected_face.value = false;
+            this.tooltip.style.visibility = "hidden";
+        }
 
         this.camera.clearViewOffset();
         this.uniforms.function_mode.value = function_mode;
