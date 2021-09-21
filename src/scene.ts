@@ -1814,24 +1814,28 @@ export class Scene extends WebGLScene {
             this.uniforms.highlight_selected_face.value = dim;
             this.uniforms.selected_face.value = index;
             let name = "";
+            let text = "";
             if(dim==1)
             {
+                text = "Edge";
                 if(this.render_data.edge_names && this.render_data.edge_names.length>index)
                     name = this.render_data.edge_names[index];
-                console.log("selected edge", index, "with name", name);
-                this.tooltip.textContent = "Edge " + index + " with name " + name;
-                this.tooltip.style.visibility = "visible";
             }
-            else if(dim==2)
-            {
+            else if(dim==2) {
+                text = "Face";
                 if(this.render_data.names && this.render_data.names.length>index)
                     name = this.render_data.names[index];
-                console.log("selected face", index, "with name", name);
-                this.tooltip.textContent = "Face " + index + " with name " + name;
-                this.tooltip.style.visibility = "visible";
             }
-            this.tooltip.style.left = `${x}px`;
-            this.tooltip.style.top = `${y}px`;
+            if(text!="") {
+                text += " ${index}";
+                if(name=="")
+                    name = "(no name)"
+                text += "\n ${name}";
+                this.tooltip.textContent = text;
+                this.tooltip.style.visibility = "visible";
+                this.tooltip.style.left = `${x}px`;
+                this.tooltip.style.top = `${y}px`;
+            }
         }
         else
         {
