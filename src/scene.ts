@@ -709,8 +709,7 @@ export class Scene extends WebGLScene {
     this.tooltip.classList.add('tooltiptext');
     this.tooltip.style.top = '10px';
     this.tooltip.style.left = '10px';
-    this.tooltip.style.visibility = 'visible';
-    console.log("tooltip", this.tooltip);
+    this.tooltip.style.visibility = 'hidden';
 
     this.pivot = new THREE.Group();
     this.pivot.matrixAutoUpdate = false;
