@@ -1369,7 +1369,7 @@ export class Scene extends WebGLScene {
   {
     var material = new THREE.RawShaderMaterial({
       vertexShader: getShader( 'vector_function.vert' ),
-      fragmentShader: getShader( 'function.frag', {NO_CLIPPING: 1}, this.render_data.user_eval_function),
+      fragmentShader: getShader( 'function.frag', {NO_CLIPPING: 1, SIDE_LIGHTS: 1}, this.render_data.user_eval_function),
       side: THREE.DoubleSide,
       uniforms: this.uniforms
     });

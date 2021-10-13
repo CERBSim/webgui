@@ -306,6 +306,19 @@ vec4 calcLight(vec4 color, vec3 position, vec3 norm, bool inside)
   }
 
   sDotN = max( dot( s, n ), 0.0 );
+#ifdef SIDE_LIGHTS
+  sDotN *= 0.8;
+  const float c = 0.3;
+  vec3 s0 = normalize( vec3(  1, 1, c ) );
+  vec3 s1 = normalize( vec3( -1, 1, c ) );
+  vec3 s2 = normalize( vec3( -1,-1, c ) );
+  vec3 s3 = normalize( vec3(  1,-1, c ) );
+
+  sDotN += 0.4*max( dot( s0, n ), 0.0 );
+  sDotN += 0.4*max( dot( s1, n ), 0.0 );
+  sDotN += 0.4*max( dot( s2, n ), 0.0 );
+  sDotN += 0.4*max( dot( s3, n ), 0.0 );
+#endif // SIDE_LIGHTS
 
   float diffuse = light_diffuse * sDotN;
 
