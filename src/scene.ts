@@ -10,6 +10,8 @@ import {
   setKeys,
 } from './utils';
 
+import { MeshFunctionObject } from './mesh';
+
 import { Grid3D, Label3D }  from './grid';
 
 import * as THREE from 'three';
@@ -625,6 +627,10 @@ export class Scene extends WebGLScene {
         this.container.removeChild(this.gui_container);
 
     this.uniforms = {};
+    let uniforms = this.uniforms;
+    uniforms.colormap_min = new THREE.Uniform( 0.0 );
+    uniforms.colormap_max = new THREE.Uniform( 1.0 );
+    uniforms.function_mode = new THREE.Uniform( 0 );
     this.gui_status_default = {
       eval: 0,
       subdivision: 5,
@@ -726,7 +732,6 @@ export class Scene extends WebGLScene {
     this.camera.position.set( 0.0, 0.0, 3 );
 
     this.clipping_plane = new THREE.Vector4(0,0,1,0);
-    let uniforms = this.uniforms;
     uniforms.aspect = new THREE.Uniform( this.camera.aspect ); 
     uniforms.line_thickness = new THREE.Uniform( 0.001 ); 
     uniforms.clipping_plane = new THREE.Uniform( this.clipping_plane ); 
@@ -790,14 +795,6 @@ export class Scene extends WebGLScene {
       gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
       gui.add(gui_status, "mesh").onChange(animate);
     }
-
-    if(render_data.show_mesh)
-    {
-      this.mesh_object = this.createCurvedMesh(render_data);
-      this.pivot.add( this.mesh_object );
-      gui.add(gui_status, "elements").onChange(animate);
-    }
-
 
     if(this.have_z_deformation || this.have_deformation)
     {
@@ -889,6 +886,15 @@ export class Scene extends WebGLScene {
         else
             console.log("render data not clipping found!!!");
 
+
+    if(render_data.show_mesh)
+    {
+      this.mesh_object = new MeshFunctionObject(render_data, uniforms);
+      this.pivot.add( this.mesh_object );
+      gui.add(gui_status, "elements").onChange(animate);
+    }
+
+
       gui_clipping.add(gui_status.Clipping, "enable").onChange(animate);
       gui_clipping.add(gui_status.Clipping, "x", -1.0, 1.0).onChange(animate);
       gui_clipping.add(gui_status.Clipping, "y", -1.0, 1.0).onChange(animate);
@@ -896,7 +902,6 @@ export class Scene extends WebGLScene {
       gui_clipping.add(gui_status.Clipping, "dist", -1.2*this.mesh_radius, 1.2*this.mesh_radius).onChange(animate);
     }
 
-    uniforms.function_mode = new THREE.Uniform( 0 );
     let draw_vectors = render_data.funcdim>1 && !render_data.is_complex;
     draw_vectors = draw_vectors && (render_data.draw_surf && render_data.mesh_dim==2 || render_data.draw_vol && render_data.mesh_dim==3);
     if(draw_vectors)
@@ -978,8 +983,8 @@ export class Scene extends WebGLScene {
         gui_status.colormap_max = render_data.mesh_regions_2d-0.5;
         // this.setSelectedFaces();
     }
-    uniforms.colormap_min = new THREE.Uniform( gui_status.colormap_min );
-    uniforms.colormap_max = new THREE.Uniform( gui_status.colormap_max );
+    uniforms.colormap_min.value = gui_status.colormap_min;
+    uniforms.colormap_max.value = gui_status.colormap_max;
 
     if(render_data.multidim_data)
     {
@@ -1242,61 +1247,6 @@ export class Scene extends WebGLScene {
   }
 
 
-  createCurvedMesh(data)
-  {
-    var geo = new THREE.InstancedBufferGeometry();
-    var position = new Float32Array(6*20*20); // 20*20 triangles
-
-    // subdivision mesh
-    var ii = 0;
-    for (var i=0; i<20; i++) {
-      for (var j=0; j<=i; j++) {
-        position[ii++] = j;
-        position[ii++] = i-j;
-        position[ii++] = j+1;
-        position[ii++] = i-j;
-        position[ii++] = j;
-        position[ii++] = i-j+1;
-      }
-      for (var j=0; j<i; j++) {
-        position[ii++] = j+1;
-        position[ii++] = i-j-1;
-        position[ii++] = j+1;
-        position[ii++] = i-j;
-        position[ii++] = j;
-        position[ii++] = i-j;
-      }
-    }
-
-    geo.setAttribute( 'position', new THREE.Float32BufferAttribute(position, 2 ));
-    geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-
-    var defines = Object({MESH_2D: 1, ORDER:data.order2d});
-    if(data.have_normals)
-        defines.HAVE_NORMALS=1;
-    if(this.have_deformation)
-      defines.DEFORMATION = 1;
-    else if(this.have_z_deformation)
-      defines.DEFORMATION_2D = 1;
-    if(data.draw_surf==false)
-      defines.NO_FUNCTION_VALUES = 1;
-
-    var mesh_material = new THREE.RawShaderMaterial({
-      vertexShader: getShader( 'trigsplines.vert', defines ),
-      fragmentShader: getShader( 'function.frag', defines, this.render_data.user_eval_function ),
-      side: THREE.DoubleSide,
-      uniforms: this.uniforms
-    });
-
-    mesh_material.polygonOffset = true;
-    mesh_material.polygonOffsetFactor = 1;
-    mesh_material.polygonOffsetUnits = 1;
-
-    var mesh = new THREE.Mesh( geo, mesh_material );
-    return mesh;
-  }
-
-
   createCurvedWireframe(data)
   {
     var geo = new THREE.InstancedBufferGeometry();
@@ -1513,37 +1463,7 @@ export class Scene extends WebGLScene {
     }
 
     if(this.mesh_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.mesh_object.geometry;
-      const data = render_data.Bezier_trig_points;
-      const order = render_data.order2d;
-
-      var names;
-      if(order == 1) {
-        names = ['p0', 'p1', 'p2']
-        if(render_data.draw_surf && render_data.funcdim>1)
-          names = names.concat(['v0', 'v1', 'v2' ]);
-      }
-      if(order == 2) {
-        names = ['p00', 'p01', 'p02', 'p10', 'p11', 'p20'];
-        if(render_data.draw_surf && render_data.funcdim>1)
-          names = names.concat([ 'vec00_01', 'vec02_10', 'vec11_20' ]);
-      }
-      if(order == 3) {
-        names = [ 'p00', 'p01', 'p02', 'p03', 'p10', 'p11', 'p12', 'p20', 'p21', 'p30'];
-        if(render_data.draw_surf && render_data.funcdim>1)
-          names = names.concat([ 'vec00_01', 'vec02_03', 'vec10_11', 'vec12_20', 'vec21_30']);
-      }
-
-      for (var i in names)
-        geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( readB64(data[i]), 4 ) );
-
-      if(render_data.have_normals)
-          for (let i=0; i<3; i++)
-              geo.setAttribute( 'n'+i, new THREE.InstancedBufferAttribute( readB64(data[3+i]), 3 ) );
-      geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-      geo.instanceCount = readB64(data[0]).length/4;
-    }
+        this.mesh_object.updateRenderData(render_data);
 
     if(this.clipping_function_object != null)
     {
@@ -1665,34 +1585,7 @@ export class Scene extends WebGLScene {
     }
 
     if(this.mesh_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.mesh_object.geometry;
-      const data = rd.Bezier_trig_points;
-      const data2 = rd2.Bezier_trig_points;
-      const order = rd.order2d;
-
-      var names;
-      if(order == 1) {
-        names = ['p0', 'p1', 'p2']
-        if(rd.draw_surf && rd.funcdim>1)
-          names = names.concat(['v0', 'v1', 'v2' ]);
-      }
-      if(order == 2) {
-        names = ['p00', 'p01', 'p02', 'p10', 'p11', 'p20'];
-        if(rd.draw_surf && rd.funcdim>1)
-          names = names.concat([ 'vec00_01', 'vec02_10', 'vec11_20' ]);
-      }
-      if(order == 3) {
-        names = [ 'p00', 'p01', 'p02', 'p03', 'p10', 'p11', 'p12', 'p20', 'p21', 'p30'];
-        if(rd.draw_surf && rd.funcdim>1)
-          names = names.concat([ 'vec00_01', 'vec02_03', 'vec10_11', 'vec12_20', 'vec21_30']);
-      }
-
-      for (var i in names)
-        geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( mixB64(data[i], data2[i]), 4 ) );
-      geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-      geo.instanceCount = readB64(data[0]).length/4;
-    }
+        this.mesh_object.updateRenderData(rd, rd2, t);
 
     if(this.clipping_function_object != null)
     {
@@ -1922,15 +1815,7 @@ export class Scene extends WebGLScene {
     }
 
     if( this.mesh_object != null )
-    {
-      this.mesh_object.visible = gui_status.elements;
-      if(gui_status.subdivision !== undefined)
-      {
-        uniforms.n_segments.value = subdivision;
-        let geo = <THREE.BufferGeometry>this.mesh_object.geometry;
-        geo.setDrawRange(0, 3*subdivision*subdivision)
-      }
-    }
+      this.mesh_object.update(gui_status);
 
     if( this.grid != null ) {
       this.grid.visible = this.gui_status.show_grid;

@@ -152,3 +152,16 @@ export function formatTimeSpan(t) {
     return t.toFixed(4) + " " + unit;
 }
 
+export function mixB64(a,b,t) {
+    const t1 = 1.0-t;
+    const mix = (a,b)=> t1*a + t*b;
+    let d1 = readB64(a);
+    let d2 = readB64(b);
+
+    for (let i=0; i<d1.length; i++)
+        d1[i] = mix(d1[i],d2[i]);
+
+    return d1;
+};
+
+
