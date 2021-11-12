@@ -17,6 +17,7 @@ import {
 } from './mesh';
 
 import { ThickEdgesObject } from './edges';
+import { ColormapObject } from './colormap';
 
 import { Grid3D, Label3D }  from './grid';
 
@@ -362,8 +363,6 @@ export class Scene extends WebGLScene {
   three_clipping_plane: THREE.Plane;
   world_clipping_plane: THREE.Plane;
   light_dir: THREE.Vector3;
-  colormap_divs: any;
-  colormap_labels: any;
   stats: any;
   event_handlers: any;
 
@@ -409,7 +408,6 @@ export class Scene extends WebGLScene {
 
   have_deformation: boolean;
   have_z_deformation: boolean;
-  label_style: string;
 
   controls: any;
 
@@ -420,8 +418,6 @@ export class Scene extends WebGLScene {
   c_autoscale: any;
   c_eval: any;
 
-  colormap_texture: any;
-
   get_face_index: boolean;
   index_render_target: any;
 
@@ -429,9 +425,6 @@ export class Scene extends WebGLScene {
     super();
     this.have_webgl2 = false;
 
-    this.label_style  = '-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; onselectstart="return false;';
-    this.label_style += 'onmousedown="return false; user-select:none;-o-user-select:none;unselectable="on";';
-    this.label_style += 'position: absolute; z-index: 1; display:block;';
     this.event_handlers = {};
   }
 
@@ -494,20 +487,7 @@ export class Scene extends WebGLScene {
     const aspect = w/h;
     this.ortho_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, -100, 100 );
     if(this.colormap_object)
-      {
-        const x0 = -aspect*0.93;
-        const y0 = 0.93;
-        this.colormap_object.position.set(x0, 0.95, 0.0);
-        this.colormap_object.updateWorldMatrix( false, false );
-
-        const n = this.colormap_labels.length;
-        const y = Math.round(0.5*(0.05+0.07)*h);
-        for(var i=0; i<n; i++)
-        {
-          const x = Math.round(0.5*w*(1.0 + (x0+i/(n-1))/aspect));
-          this.colormap_divs[i].setAttribute("style",this.label_style+`transform: translate(-50%, 0%); left: ${x}px; top: ${y}px` );
-        }
-      }
+        this.colormap_object.onResize(w,h);
       this.camera.aspect = aspect;
       this.uniforms.aspect.value = aspect;
       this.camera.updateProjectionMatrix();
@@ -519,20 +499,6 @@ export class Scene extends WebGLScene {
       // this.index_render_target = 
       //   const pixels = new Float32Array(4);
       //   const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
-  }
-
-  updateColormapLabels()
-  {
-    const n = this.colormap_labels.length;
-    const min = this.gui_status.colormap_min;
-    const inc = (this.gui_status.colormap_max-min)/(n-1);
-    if(this.gui_status.Misc.colormap)
-      for(var i=0; i<n; i++)
-    this.colormap_labels[i].nodeValue = (min+inc*i).toPrecision(2);
-    else
-      for(var i=0; i<n; i++)
-    this.colormap_labels[i].nodeValue = "";
-    this.animate();
   }
 
   updateClippingPlaneCamera()
@@ -611,7 +577,6 @@ export class Scene extends WebGLScene {
     }
     this.c_cmin.updateDisplay();
     this.c_cmax.updateDisplay();
-    this.updateColormapLabels();
     this.animate();
   }
 
@@ -621,7 +586,7 @@ export class Scene extends WebGLScene {
     // label with NGSolve version at right lower corner
     this.version_object = document.createElement("div");
     var style = 'bottom: 10px; right: 10px';
-    this.version_object.setAttribute("style",this.label_style+style);
+    // this.version_object.setAttribute("style",this.label_style+style); TODO
     this.container.appendChild(this.version_object);
 
     window.addEventListener( 'resize', ()=>this.onResize(), false );
@@ -663,9 +628,6 @@ export class Scene extends WebGLScene {
 
     this.gui_status = JSON.parse(JSON.stringify(this.gui_status_default)); // deep-copy settings
     this.gui_functions = { };
-
-    this.colormap_object = null;
-
 
     this.colormap_object = null;
     this.edges_object = null;
@@ -797,9 +759,9 @@ export class Scene extends WebGLScene {
       gui_status.autoscale = this.gui_status_default.autoscale;
       this.c_autoscale = gui.add(gui_status, "autoscale");
       this.c_cmin = gui.add(gui_status, "colormap_min");
-      this.c_cmin.onChange(()=>this.updateColormapLabels());
+      this.c_cmin.onChange(animate);
       this.c_cmax = gui.add(gui_status, "colormap_max");
-      this.c_cmax.onChange(()=>this.updateColormapLabels());
+      this.c_cmax.onChange(animate);
 
       this.c_autoscale.onChange((checked)=> {
         if(checked)
@@ -809,10 +771,11 @@ export class Scene extends WebGLScene {
       if(cmax>cmin)
         this.setStepSize(cmin, cmax);
 
-      gui.add(gui_status, "colormap_ncolors", 2, 32,1).onChange(()=>{this.updateColormap(); this.animate();});
+      gui.add(gui_status, "colormap_ncolors", 2, 32,1).onChange(animate);
     }
-    this.updateColormap();
 
+    if(this.funcdim>0 && this.colormap_object == null)
+        this.colormap_object = new ColormapObject(this.render_data, this.uniforms, this.container, this.gui_status);
 
     uniforms.n_segments = new THREE.Uniform(5);
     if(render_data.edges.length)
@@ -1072,7 +1035,7 @@ export class Scene extends WebGLScene {
     gui_misc.add(gui_status.Misc, "reduce_subdivision");
 
     if(this.colormap_object)
-      gui_misc.add(gui_status.Misc, "colormap").onChange(()=>this.updateColormapLabels());
+      gui_misc.add(gui_status.Misc, "colormap").onChange(animate);
 
     gui_misc.add(gui_status.Misc, "axes").onChange(animate);
     gui_misc.add(gui_status.Misc, "version").onChange(value => {
@@ -1124,131 +1087,6 @@ export class Scene extends WebGLScene {
   {
     this.initCanvas(element, webgl_args);
     this.initRenderData(render_data);
-  }
-
-  setSelectedFaces( bnds = [], col_selected = [0,0.5,1.0], col_default = [0,1,0] )
-  {
-    var n_colors = this.render_data.mesh_regions_2d;
-    var colormap_data = new Float32Array(3*n_colors);
-
-    for (var i=0; i<n_colors; i++)
-    {
-      colormap_data[3*i+0] = col_default[0];
-      colormap_data[3*i+1] = col_default[1];
-      colormap_data[3*i+2] = col_default[0];
-    }
-    for (var i=0; i<bnds.length; i++)
-    {
-      colormap_data[3*bnds[i]+0] = col_selected[0];
-      colormap_data[3*bnds[i]+1] = col_selected[1];
-      colormap_data[3*bnds[i]+2] = col_selected[2];
-    }
-
-    this.colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
-    this.colormap_texture.magFilter = THREE.NearestFilter;
-    this.colormap_texture.needsUpdate = true;
-    this.uniforms.tex_colormap = { value: this.colormap_texture};
-  }
-
-  updateColormap( )
-  {
-    if(this.mesh_only) {
-        console.log("update colormap for mesh");
-        // Drawing only a mesh -> colors are given explicitly in render data (or just use green)
-        var n_colors = this.render_data.mesh_regions_2d;
-        var colormap_data = new Float32Array(3*n_colors);
-
-        for (var i=0; i<3*n_colors; i++) {
-            if(i%3==1)
-                colormap_data[i] = 1.0;
-            else
-                colormap_data[i] = 0.0;
-        }
-
-        const colors = this.render_data.colors;
-        if(colors) {
-          for (var i=0; i<colors.length; i++)
-              for (var k=0; k<3; k++)
-                  colormap_data[3*i+k] = colors[i][k];
-        }
-        this.colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
-        this.colormap_texture.magFilter = THREE.NearestFilter;
-        this.colormap_texture.needsUpdate = true;
-        this.uniforms.tex_colormap = { value: this.colormap_texture};
-    }
-    else {
-        var n_colors = this.gui_status.colormap_ncolors;
-        var colormap_data = new Float32Array(3*n_colors);
-
-        var col_blue = new THREE.Vector3(0,0,1);
-        var col_cyan = new THREE.Vector3(0,1,1);
-        var col_green = new THREE.Vector3(0,1,0);
-        var col_yellow = new THREE.Vector3(1,1,0);
-        var col_red = new THREE.Vector3(1,0,0);
-
-        for (var i=0; i<n_colors; i++)
-        {
-          let x = 1.0/(n_colors-1) * i;
-          let hx, color;
-          if (x < 0.25)
-          {
-            hx = 4.0*x;
-            color = col_blue.clone().multiplyScalar(1.0-hx).addScaledVector(col_cyan, hx);
-          }
-          else if (x < 0.5)
-          {
-            hx = 4.0*x-1.0;
-            color = col_cyan.clone().multiplyScalar(1.0-hx).addScaledVector(col_green, hx);
-          }
-          else if (x < 0.75)
-          {
-            hx = 4.0*x-2.0;
-            color = col_green.clone().multiplyScalar(1.0-hx).addScaledVector(col_yellow, hx);
-          }
-          else
-          {
-            hx = 4.0*x-3.0;
-            color = col_yellow.clone().multiplyScalar(1.0-hx).addScaledVector(col_red, hx);
-          }
-          colormap_data[3*i+0] = color.x;
-          colormap_data[3*i+1] = color.y;
-          colormap_data[3*i+2] = color.z;
-        }
-
-        this.colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
-        this.colormap_texture.magFilter = THREE.NearestFilter;
-        this.colormap_texture.needsUpdate = true;
-        this.uniforms.tex_colormap = { value: this.colormap_texture};
-    }
-
-    if(this.funcdim>0 && this.colormap_object == null)
-      {
-        var geo = new THREE.PlaneGeometry(1., 0.07).translate(0.5,0,0);
-        var material = new THREE.MeshBasicMaterial({depthTest: false, map: this.colormap_texture, side: THREE.DoubleSide, wireframe: false});
-        this.colormap_object = new THREE.Mesh( geo, material );
-
-        // Create 5 html div/text elements for numbers
-        this.colormap_labels = [];
-        this.colormap_divs = [];
-        var labels_object = document.createElement("div");
-        for(var i=0; i<5; i++)
-        {
-          var label = document.createElement("div");
-          var t = document.createTextNode("");
-          label.appendChild(t)
-          this.colormap_divs.push(label);
-          this.colormap_labels.push(t);
-          labels_object.appendChild(label);
-        }
-        this.container.appendChild(labels_object);
-        this.updateColormapLabels();
-      }
-
-      if(this.colormap_object != null)
-        {
-          let material = <THREE.MeshBasicMaterial>this.colormap_object.material;
-          material.map = this.colormap_texture;
-        }
   }
 
 
@@ -1319,8 +1157,8 @@ export class Scene extends WebGLScene {
         }
         this.c_cmin.updateDisplay();
         this.c_cmax.updateDisplay();
-        this.updateColormapLabels();
 
+        this.colormap_object.update(this.gui_status);
       }
 
       if(cmax>cmin)
@@ -1356,6 +1194,7 @@ export class Scene extends WebGLScene {
     if(this.clipping_function_object != null)
         this.clipping_function_object.updateRenderData(rd, rd2, t);
 
+
     if(rd.draw_surf || rd.draw_vol)
     {
       const cmin = mix(rd.funcmin, rd2.funcmin);
@@ -1369,8 +1208,6 @@ export class Scene extends WebGLScene {
         this.gui_status.colormap_max = cmax;
         this.c_cmin.updateDisplay();
         this.c_cmax.updateDisplay();
-        this.updateColormapLabels();
-
       }
 
       if(cmax>cmin)
@@ -1550,6 +1387,9 @@ export class Scene extends WebGLScene {
 
     if( this.mesh_object != null )
       this.mesh_object.update(gui_status);
+
+    if( this.colormap_object != null )
+      this.colormap_object.update(gui_status);
 
     if( this.grid != null ) {
       this.grid.visible = this.gui_status.show_grid;
