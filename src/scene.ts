@@ -10,7 +10,12 @@ import {
   setKeys,
 } from './utils';
 
-import { MeshFunctionObject } from './mesh';
+import {
+    MeshFunctionObject,
+    WireframeObject,
+    ClippingFunctionObject,
+} from './mesh';
+
 import { ThickEdgesObject } from './edges';
 
 import { Grid3D, Label3D }  from './grid';
@@ -791,7 +796,7 @@ export class Scene extends WebGLScene {
 
     if(render_data.show_wireframe && render_data.Bezier_points.length>0)
     {
-      this.wireframe_object = this.createCurvedWireframe(render_data);
+      this.wireframe_object = new WireframeObject(render_data, uniforms);
       this.pivot.add(this.wireframe_object);
       gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
       gui.add(gui_status, "mesh").onChange(animate);
@@ -853,14 +858,13 @@ export class Scene extends WebGLScene {
               gui_status.Clipping.function = render_data.clipping_function;
           }
 
-        this.clipping_function_object = this.createClippingPlaneMesh(render_data);
+        this.clipping_function_object = new ClippingFunctionObject(render_data, uniforms);
         this.pivot.add(this.clipping_function_object);
         gui_clipping.add(gui_status.Clipping, "function").onChange(animate);
       }
 
       if(render_data.clipping)
         {
-            console.log("render data clipping found");
             this.gui_status_default.Clipping.enable = true;
             gui_status.Clipping.enable = true;
             if(render_data.clipping_x != undefined)
@@ -1248,37 +1252,6 @@ export class Scene extends WebGLScene {
   }
 
 
-  createCurvedWireframe(data)
-  {
-    var geo = new THREE.InstancedBufferGeometry();
-
-    var inst = new Float32Array(21); // 20 = max value of n_segments
-    for (var i=0; i <= 20; i++)
-    inst[i] = i;
-
-    geo.setAttribute( 'position', new THREE.Float32BufferAttribute( inst, 1 ));
-
-    let defines = Object({ORDER: data.order2d});
-    if(this.have_deformation)
-      defines.DEFORMATION = 1;
-    else if(this.have_z_deformation)
-      defines.DEFORMATION_2D = 1;
-    var wireframe_material = new THREE.RawShaderMaterial({
-      vertexShader: getShader( 'splines.vert', defines ),
-      fragmentShader: getShader( 'splines.frag', defines ),
-      uniforms: this.uniforms
-    });
-
-    var wireframe = new THREE.Line( geo, wireframe_material );
-    return wireframe;
-  }
-
-
-  createThickEdges(data)
-  {
-  }
-
-
   createClippingVectors(data)
   {
     var material = new THREE.RawShaderMaterial({
@@ -1301,73 +1274,6 @@ export class Scene extends WebGLScene {
     return mesh;
   }
 
-  createClippingPlaneMesh(data)
-  {
-    const defines = {ORDER: data.order3d, SKIP_FACE_CHECK: 1, NO_CLIPPING: 1};
-    var material = new THREE.RawShaderMaterial({
-      vertexShader: getShader( 'clipping_vectors.vert', defines ),
-      fragmentShader: getShader( 'function.frag', defines , this.render_data.user_eval_function),
-      side: THREE.DoubleSide,
-      uniforms: this.uniforms
-    });
-
-
-    const sd = 20;    // with texture: only 10
-    const nverts = 6*sd*sd*sd;
-    var vertid = new Float32Array(4*nverts);
-
-    var ii = 0;
-    var kk = 0;
-    for (var i=0; i<sd; i++) {
-
-      for (var j=0; j<=i; j++) {
-        for (var k=0; k<=i-j; k++) {
-          for (var l = 0; l < 6; l++) {
-            vertid[4*kk+0] = 0*6 + l;
-            vertid[4*kk+1] = j;
-            vertid[4*kk+2] = k;
-            vertid[4*kk+3] = i-j-k;
-            kk++;
-          }
-        }
-      }
-
-      for (var j=0; j<=i-1; j++) {
-        for (var k=0; k<=i-1-j; k++) {
-          for (var m = 0; m < 4; m++)
-          for (var l = 0; l < 6; l++) {
-            vertid[4*kk+0] = (m+1)*6 + l;                    
-            vertid[4*kk+1] = j;
-            vertid[4*kk+2] = k;
-            vertid[4*kk+3] = i-j-k-1;
-            kk++;
-          }
-        }
-      }
-
-      // with i>2 hexes fit into subdivided tets, add tet with point (1,1,1) in hex
-      for (var j=0; j<=i-2; j++) {
-        for (var k=0; k<=i-2-j; k++) {
-          for (var l = 0; l < 6; l++) {
-            vertid[4*kk+0] = 5*6 + l;                                    
-            vertid[4*kk+1] = j+1;
-            vertid[4*kk+2] = k+1;
-            vertid[4*kk+3] = i-1-j-k;
-            kk++;
-          }
-
-        }
-      }
-
-    }
-
-    var geo = new THREE.InstancedBufferGeometry();
-    geo.setAttribute( 'position', new THREE.Float32BufferAttribute( vertid, 4 ));
-    geo.setAttribute( 'vertid',   new THREE.Float32BufferAttribute( vertid, 4 ));
-
-    return new THREE.Mesh( geo, material );
-  }
-
   // called on scene.Redraw() from Python
   updateRenderData(render_data)
   {
@@ -1384,51 +1290,13 @@ export class Scene extends WebGLScene {
         this.edges_object.updateRenderData(render_data);
 
     if(this.wireframe_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.wireframe_object.geometry;
-
-      let pnames = [];
-      let vnames = [];
-      const o = render_data.order2d;
-      for(let i=0; i<o+1; i++)
-      {
-        pnames.push('p'+i);
-        vnames.push('v'+i);
-      }
-
-      const data = render_data.Bezier_points;
-      for (let i=0; i<o+1; i++)
-        geo.setAttribute( pnames[i], new THREE.InstancedBufferAttribute( readB64(data[i]), 4 ) );
-
-      if(render_data.draw_surf && render_data.funcdim>1)
-        for (let i=0;i<vnames.length; i++)
-          geo.setAttribute( vnames[i], new THREE.InstancedBufferAttribute( readB64(data[o+1+i]), 2 ) );
-
-      geo.instanceCount = readB64(data[0]).length/4;
-      geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-    }
+        this.wireframe_object.updateRenderData(render_data);
 
     if(this.mesh_object != null)
         this.mesh_object.updateRenderData(render_data);
 
     if(this.clipping_function_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.clipping_function_object.geometry;
-
-      let names = [ 'p0', 'p1', 'p2', 'p3' ];
-      if(render_data.order3d==2)
-        names = names.concat(['p03', 'p13', 'p23', 'p01', 'p02', 'p12' ]);
-
-      if(render_data.funcdim>1 && render_data.draw_vol)
-      {
-        names = names.concat(['v0_1', 'v2_3']);
-        if(render_data.order3d==2)
-          names = names.concat(['v03_13', 'v23_01', 'v02_12']);
-      }
-
-      for (var i in names)
-        geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( readB64(render_data.points3d[i]), 4 ) );
-    }
+        this.clipping_function_object.updateRenderData(render_data);
 
     if(render_data.draw_surf || render_data.draw_vol)
     {
@@ -1480,56 +1348,13 @@ export class Scene extends WebGLScene {
         this.edges_object.updateRenderData( rd, rd2, t );
 
     if(this.wireframe_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.wireframe_object.geometry;
-
-      let pnames = [];
-      let vnames = [];
-      const o = rd.order2d;
-      for(let i=0; i<o+1; i++)
-      {
-        pnames.push('p'+i);
-        vnames.push('v'+i);
-      }
-
-      const data = rd.Bezier_points;
-      const data2 = rd2.Bezier_points;
-      for (let i=0; i<o+1; i++)
-      {
-        geo.setAttribute( pnames[i], new THREE.InstancedBufferAttribute( mixB64(data[i], data2[i]), 4 ) );
-      }
-
-      if(rd.draw_surf && rd.funcdim>1)
-        for (let i=0;i<vnames.length; i++)
-        {
-          geo.setAttribute( vnames[i], new THREE.InstancedBufferAttribute( mixB64(data[o+1+i], data2[o+1+i]), 2 ) );
-        }
-
-      geo.instanceCount = readB64(data[0]).length/4;
-      geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-    }
+        this.wireframe_object.updateRenderData( rd, rd2, t );
 
     if(this.mesh_object != null)
         this.mesh_object.updateRenderData(rd, rd2, t);
 
     if(this.clipping_function_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.clipping_function_object.geometry;
-
-      let names = [ 'p0', 'p1', 'p2', 'p3' ];
-      if(rd.order3d==2)
-        names = names.concat(['p03', 'p13', 'p23', 'p01', 'p02', 'p12' ]);
-
-      if(rd.funcdim>1 && rd.draw_vol)
-      {
-        names = names.concat(['v0_1', 'v2_3']);
-        if(rd.order3d==2)
-          names = names.concat(['v03_13', 'v23_01', 'v02_12']);
-      }
-
-      for (var i in names)
-        geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( mixB64(rd.points3d[i], rd2.points3d[i]), 4 ) );
-    }
+        this.clipping_function_object.updateRenderData(rd, rd2, t);
 
     if(rd.draw_surf || rd.draw_vol)
     {
@@ -1721,15 +1546,7 @@ export class Scene extends WebGLScene {
         this.edges_object.update(gui_status);
 
     if( this.wireframe_object != null )
-    {
-      this.wireframe_object.visible = gui_status.mesh;
-      if(gui_status.subdivision !== undefined)
-      {
-        uniforms.n_segments.value = subdivision;
-        let geo = <THREE.BufferGeometry>this.wireframe_object.geometry;
-        geo.setDrawRange(0, subdivision+1);
-      }
-    }
+      this.wireframe_object.update(gui_status);
 
     if( this.mesh_object != null )
       this.mesh_object.update(gui_status);
@@ -1740,13 +1557,7 @@ export class Scene extends WebGLScene {
     }
 
     if( this.clipping_function_object != null )
-    {
-      uniforms.n_segments.value = subdivision;
-      const sd = subdivision;
-      let geo = <THREE.BufferGeometry>this.clipping_function_object.geometry;
-      geo.setDrawRange(0, 6*sd*sd*sd);
-      this.clipping_function_object.visible = gui_status.Clipping.function && gui_status.Clipping.enable;
-    }
+        this.clipping_function_object.update(gui_status);
 
     let three_clipping_plane = this.three_clipping_plane;
     three_clipping_plane.normal.set(gui_status.Clipping.x, gui_status.Clipping.y, gui_status.Clipping.z);
