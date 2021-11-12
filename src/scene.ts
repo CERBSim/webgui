@@ -784,6 +784,35 @@ export class Scene extends WebGLScene {
 
     // const grid = new THREE.GridHelper( 400, 40, 0x0000ff, 0x808080 );
 
+    if(render_data.draw_vol || render_data.draw_surf)
+    {
+      const cmin = render_data.funcmin;
+      const cmax = render_data.funcmax;
+      gui_status.colormap_min = cmin;
+      gui_status.colormap_max = cmax;
+      this.gui_status_default.colormap_min = cmin;
+      this.gui_status_default.colormap_max = cmax;
+      this.gui_status_default.autoscale = render_data.autoscale || false;
+
+      gui_status.autoscale = this.gui_status_default.autoscale;
+      this.c_autoscale = gui.add(gui_status, "autoscale");
+      this.c_cmin = gui.add(gui_status, "colormap_min");
+      this.c_cmin.onChange(()=>this.updateColormapLabels());
+      this.c_cmax = gui.add(gui_status, "colormap_max");
+      this.c_cmax.onChange(()=>this.updateColormapLabels());
+
+      this.c_autoscale.onChange((checked)=> {
+        if(checked)
+          this.updateColormapToAutoscale();
+      });
+
+      if(cmax>cmin)
+        this.setStepSize(cmin, cmax);
+
+      gui.add(gui_status, "colormap_ncolors", 2, 32,1).onChange(()=>{this.updateColormap(); this.animate();});
+    }
+    this.updateColormap();
+
 
     uniforms.n_segments = new THREE.Uniform(5);
     if(render_data.edges.length)
@@ -950,35 +979,6 @@ export class Scene extends WebGLScene {
       this.pivot.add(this.clipping_vectors_object);
       this.updateGridsize();
     }
-
-    if(render_data.draw_vol || render_data.draw_surf)
-    {
-      const cmin = render_data.funcmin;
-      const cmax = render_data.funcmax;
-      gui_status.colormap_min = cmin;
-      gui_status.colormap_max = cmax;
-      this.gui_status_default.colormap_min = cmin;
-      this.gui_status_default.colormap_max = cmax;
-      this.gui_status_default.autoscale = render_data.autoscale || false;
-
-      gui_status.autoscale = this.gui_status_default.autoscale;
-      this.c_autoscale = gui.add(gui_status, "autoscale");
-      this.c_cmin = gui.add(gui_status, "colormap_min");
-      this.c_cmin.onChange(()=>this.updateColormapLabels());
-      this.c_cmax = gui.add(gui_status, "colormap_max");
-      this.c_cmax.onChange(()=>this.updateColormapLabels());
-
-      this.c_autoscale.onChange((checked)=> {
-        if(checked)
-          this.updateColormapToAutoscale();
-      });
-
-      if(cmax>cmin)
-        this.setStepSize(cmin, cmax);
-
-      gui.add(gui_status, "colormap_ncolors", 2, 32,1).onChange(()=>{this.updateColormap(); this.animate();});
-    }
-    this.updateColormap();
 
     if(this.mesh_only)
     {
