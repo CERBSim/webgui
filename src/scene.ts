@@ -1,10 +1,5 @@
 import {
-  MODULE_NAME, MODULE_VERSION
-} from './version';
-
-import {
   WebGLScene,
-  getCookie,
   getShader,
   readB64,
   setKeys,

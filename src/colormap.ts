@@ -1,18 +1,3 @@
-
-import {
-  MODULE_NAME, MODULE_VERSION
-} from './version';
-
-import {
-  WebGLScene,
-  getCookie,
-  getShader,
-  readB64,
-  mixB64,
-  setKeys,
-  MAX_SUBDIVISION,
-} from './utils';
-
 import * as THREE from 'three';
 
 const css = require('./styles.css');
