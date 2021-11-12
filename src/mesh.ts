@@ -9,18 +9,16 @@ import {
   readB64,
   mixB64,
   setKeys,
+  MAX_SUBDIVISION,
 } from './utils';
 
 import * as THREE from 'three';
 
 const css = require('./styles.css');
-const MAX_SUBDIVISION = 20;
 
 export class MeshFunctionObject extends THREE.Mesh {
     uniforms : any;
     data : Object;
-    have_deformation: boolean;
-    have_z_deformation: boolean;
     mesh_only: boolean;
     buffer_geometry: THREE.BufferGeometry;
 
@@ -84,12 +82,9 @@ export class MeshFunctionObject extends THREE.Mesh {
         super(geo, mesh_material);
         super.name = data.name;
         this.data = data;
-        this.have_deformation = have_deformation;
-        this.have_z_deformation = have_z_deformation;
         this.mesh_only = mesh_only;
         this.uniforms = uniforms;
         this.buffer_geometry = geo;
-        console.log("CONSTRUCTOR FINISHED", this);
     }
 
     update(gui_status) {
@@ -102,10 +97,8 @@ export class MeshFunctionObject extends THREE.Mesh {
     }
 
     updateRenderData(data, data2, t) {
-        console.log("UPDATE RENDERDATA", data, data2, t);
         this.data = data;
         let geo = this.buffer_geometry;
-        console.log("geometry", geo);
         const pdata = data.Bezier_trig_points;
         const pdata2 = data2 && data2.Bezier_trig_points;
         const do_interpolate = t !== undefined;
@@ -128,17 +121,17 @@ export class MeshFunctionObject extends THREE.Mesh {
                 names = names.concat([ 'vec00_01', 'vec02_03', 'vec10_11', 'vec12_20', 'vec21_30']);
         }
 
-        const get_values = (i) => {
-            return do_interpolate ? mixB64(pdata[i], pdata2[i], t) : readB64(pdata[i]);
+        const get_values = (i, ncomps) => {
+            const vals = do_interpolate ? mixB64(pdata[i], pdata2[i], t) : readB64(pdata[i]);
+            return new THREE.InstancedBufferAttribute( vals, ncomps );
         }
 
-        console.log(names, get_values(1));
         for (var i in names)
-            geo.setAttribute( names[i], new THREE.InstancedBufferAttribute( get_values(i), 4 ) );
+            geo.setAttribute( names[i],  get_values(i, 4) );
 
         if(data.have_normals)
             for (let i=0; i<3; i++)
-        geo.setAttribute( 'n'+i, new THREE.InstancedBufferAttribute( get_values(3+i), 3 ) );
+                geo.setAttribute( 'n'+i, get_values(3+i, 3) );
         geo.boundingSphere = new THREE.Sphere(data.mesh_center, data.mesh_radius);
         geo.instanceCount = readB64(pdata[0]).length/4;
     }

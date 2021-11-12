@@ -11,6 +11,7 @@ import {
 } from './utils';
 
 import { MeshFunctionObject } from './mesh';
+import { ThickEdgesObject } from './edges';
 
 import { Grid3D, Label3D }  from './grid';
 
@@ -369,9 +370,9 @@ export class Scene extends WebGLScene {
   uniforms: any;
 
   colormap_object: any;
-  edges_object: THREE.Line;
+  edges_object: any;
   wireframe_object: THREE.Line;
-  mesh_object: THREE.Mesh;
+  mesh_object: any;
   clipping_function_object: THREE.Mesh;
   clipping_vectors_object: THREE.Mesh;
   axes_object: any;
@@ -782,7 +783,7 @@ export class Scene extends WebGLScene {
     uniforms.n_segments = new THREE.Uniform(5);
     if(render_data.edges.length)
     {
-      this.edges_object = this.createThickEdges(render_data);
+      this.edges_object = new ThickEdgesObject(render_data, uniforms);
       this.pivot.add(this.edges_object);
       gui.add(gui_status, "line_thickness", 1,20,1).onChange(animate);
       gui.add(gui_status, "edges").onChange(animate);
@@ -1275,43 +1276,6 @@ export class Scene extends WebGLScene {
 
   createThickEdges(data)
   {
-    var geo = new THREE.InstancedBufferGeometry();
-
-    var inst = new Float32Array(21*2*3*2); // 20 = max value of n_segments, 2 trigs per segment, 2 coordinates
-    for (var i=0; i <= 20; i++)
-    {
-        const i0 = 12*i;
-        inst[i0+ 0] = i;
-        inst[i0+ 2] = i;
-        inst[i0+ 4] = i+1;
-        inst[i0+ 6] = i+1;
-        inst[i0+ 8] = i+1;
-        inst[i0+10] = i;
-
-        inst[i0+ 1] =  1;
-        inst[i0+ 3] = -1;
-        inst[i0+ 5] = -1;
-        inst[i0+ 7] = -1;
-        inst[i0+ 9] =  1;
-        inst[i0+11] =  1;
-    }
-
-    geo.setAttribute( 'position', new THREE.Float32BufferAttribute( inst, 2 ));
-
-    let defines = Object({ORDER: data.order2d});
-    if(this.have_deformation)
-      defines.DEFORMATION = 1;
-    else if(this.have_z_deformation)
-      defines.DEFORMATION_2D = 1;
-    defines.THICK_LINES = 1;
-    var wireframe_material = new THREE.RawShaderMaterial({
-      vertexShader: getShader( 'splines.vert', defines ),
-      fragmentShader: getShader( 'splines.frag', defines ),
-      uniforms: this.uniforms
-    });
-
-    var wireframe = new THREE.Mesh( geo, wireframe_material );
-    return wireframe;
   }
 
 
@@ -1417,25 +1381,7 @@ export class Scene extends WebGLScene {
   setRenderData(render_data)
   {
     if(this.edges_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.edges_object.geometry;
-
-      let pnames = [];
-      let vnames = [];
-      const o = render_data.order2d;
-      for(let i=0; i<o+1; i++)
-      {
-        pnames.push('p'+i);
-        vnames.push('v'+i);
-      }
-
-      const data = render_data.edges;
-      for (let i=0; i<o+1; i++)
-        geo.setAttribute( pnames[i], new THREE.InstancedBufferAttribute( readB64(data[i]), 4 ) );
-
-      geo.instanceCount = readB64(data[0]).length/4;
-      geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-    }
+        this.edges_object.updateRenderData(render_data);
 
     if(this.wireframe_object != null)
     {
@@ -1531,28 +1477,7 @@ export class Scene extends WebGLScene {
     };
 
     if(this.edges_object != null)
-    {
-      let geo = <THREE.InstancedBufferGeometry>this.edges_object.geometry;
-
-      let pnames = [];
-      let vnames = [];
-      const o = rd.order2d;
-      for(let i=0; i<o+1; i++)
-      {
-        pnames.push('p'+i);
-        vnames.push('v'+i);
-      }
-
-      const data = rd.edges;
-      const data2 = rd2.edges;
-      for (let i=0; i<o+1; i++)
-      {
-        geo.setAttribute( pnames[i], new THREE.InstancedBufferAttribute( mixB64(data[i], data2[i]), 4 ) );
-      }
-
-      geo.instanceCount = readB64(data[0]).length/4;
-      geo.boundingSphere = new THREE.Sphere(this.mesh_center, this.mesh_radius);
-    }
+        this.edges_object.updateRenderData( rd, rd2, t );
 
     if(this.wireframe_object != null)
     {
@@ -1793,15 +1718,7 @@ export class Scene extends WebGLScene {
       subdivision = Math.ceil(subdivision/2);
 
     if( this.edges_object != null )
-    {
-      this.edges_object.visible = gui_status.edges;
-      if(gui_status.subdivision !== undefined)
-      {
-        uniforms.n_segments.value = subdivision;
-        let geo = <THREE.BufferGeometry>this.edges_object.geometry;
-        geo.setDrawRange(0, 6*subdivision);
-      }
-    }
+        this.edges_object.update(gui_status);
 
     if( this.wireframe_object != null )
     {

@@ -4,6 +4,8 @@ import {
   shaders
 } from './shaders';
 
+export const MAX_SUBDIVISION = 20;
+
 export class WebGLScene {
   element : any;
   context : any;
