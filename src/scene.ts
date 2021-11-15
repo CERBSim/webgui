@@ -16,6 +16,7 @@ import { ColormapObject } from './colormap';
 import { CameraControls } from './camera';
 
 import { Grid3D, Label3D }  from './grid';
+import { GUI }  from './gui';
 
 import * as THREE from 'three';
 // import Stats from "https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min";
@@ -68,8 +69,6 @@ export class Scene extends WebGLScene {
   multidim_controller: any;
 
   phase_controller: any;
-  c_cmin: any;
-  c_cmax: any;
 
   buffer_scene: THREE.Scene;
   buffer_object: THREE.Mesh;
@@ -90,9 +89,6 @@ export class Scene extends WebGLScene {
   mesh_only: boolean;
 
   version_object: any;
-  c_autoscale: any;
-  c_eval: any;
-
   get_face_index: boolean;
   index_render_target: any;
 
@@ -142,18 +138,6 @@ export class Scene extends WebGLScene {
     }
     this.animate();
   }
-
-  setStepSize( cmin, cmax ) {
-    if(cmin>=cmax)
-      return 1e-8;
-    const step = Math.pow(10, -4+Math.floor(Math.log10(cmax-cmin)));
-    const prec = 10;
-    this.c_cmin.step(step);
-    this.c_cmax.step(step);
-    this.c_cmin.__precision = prec;
-    this.c_cmax.__precision = prec;
-  }
-
 
   onResize() {
     const w = this.element.parentNode.clientWidth;
@@ -236,25 +220,6 @@ export class Scene extends WebGLScene {
     this.animate();
   }
 
-  updateColormapToAutoscale()
-  {
-    let s = this.gui_status;
-    let def = this.gui_status_default;
-    if(s.eval==3) // drawing norm -> min is 0
-    {
-      s.colormap_min = 0.0;
-      s.colormap_max = Math.max(def.colormap_max, def.colormap_min);
-    }
-    else
-    {
-      s.colormap_min = def.colormap_min;
-      s.colormap_max = def.colormap_max;
-    }
-    this.c_cmin.updateDisplay();
-    this.c_cmax.updateDisplay();
-    this.animate();
-  }
-
   initCanvas (element, webgl_args)
   {
     WebGLScene.prototype.initCanvas.call(this, element, webgl_args);
@@ -269,40 +234,14 @@ export class Scene extends WebGLScene {
 
   initRenderData (render_data)
   {
-    if(this.gui_container!=undefined)
-        this.container.removeChild(this.gui_container);
+    if(this.gui!=null)
+        this.gui.destroy();
 
     this.uniforms = {};
     let uniforms = this.uniforms;
     uniforms.colormap_min = new THREE.Uniform( 0.0 );
     uniforms.colormap_max = new THREE.Uniform( 1.0 );
     uniforms.function_mode = new THREE.Uniform( 0 );
-    this.gui_status_default = {
-      eval: 0,
-      subdivision: 5,
-      edges: true,
-      mesh: true,
-      elements: true,
-      autoscale: true,
-      colormap_ncolors: 8,
-      colormap_min: -1.0,
-      colormap_max: 1.0,
-      deformation: 0.0,
-      show_grid: false,
-      line_thickness: 5,
-      Multidim: { t: 0.0, multidim: 0, animate: false, speed: 2 },
-      Complex: { phase: 0.0, deform: 0.0, animate: false, speed: 2 },
-      Clipping: { enable: false, function: true, x: 0.0, y: 0.0, z: 1.0, dist: 0.0 },
-      Light: { ambient: 0.3, diffuse: 0.7, shininess: 10, specularity: 0.3},
-      Vectors: { show: false, grid_size: 10, offset: 0.0 },
-      Misc: { stats: "-1", reduce_subdivision: false, "version": true, "axes": true, "colormap": true },
-    };
-
-    if(Math.max(render_data.order2d, render_data.order3d)<=1)
-        this.gui_status_default.subdivision=1;
-
-    this.gui_status = JSON.parse(JSON.stringify(this.gui_status_default)); // deep-copy settings
-    this.gui_functions = { };
 
     this.colormap_object = null;
     this.edges_object = null;
@@ -321,7 +260,6 @@ export class Scene extends WebGLScene {
     this.funcdim = render_data.funcdim;
     this.is_complex = render_data.is_complex;
     console.log("THREE", THREE);
-    console.log("dat", dat);
     // console.log("Stats", Stats);
 
 
@@ -398,19 +336,15 @@ export class Scene extends WebGLScene {
     this.mouse = new THREE.Vector2(0.0, 0.0);
     this.center_tag = null;
 
-    let gui = new dat.GUI({autoPlace: false, closeOnTop: true, closed: true});
-    gui.closed = true;
-    let gui_container = document.createElement( 'div' );
-    gui_container.setAttribute("style", 'position: absolute; z-index: 2; display:block; right: 0px; top: 0px');
-    gui_container.appendChild(gui.domElement);
-    this.container.appendChild(gui_container);
-    this.gui_container = gui_container;
-
-    this.gui = gui;
-    console.log("GUI", gui);
-    let gui_status = this.gui_status;
-    console.log("gui_status", gui_status);
     let animate = ()=>this.animate();
+    let gui = new GUI(this.container, render_data, animate);
+    this.gui = gui;
+    this.gui_status = gui.gui_status;
+    let gui_status = this.gui_status;
+    this.gui_status_default = gui.gui_status_default;
+
+    console.log("GUI", gui);
+    console.log("gui_status", gui_status);
 
     // var planeGeom = new THREE.PlaneBufferGeometry(10, 5, 10, 5);
     // console.log("planegeom", planeGeom);
@@ -418,34 +352,6 @@ export class Scene extends WebGLScene {
     // console.log("gridplane", gridPlane);
 
     // const grid = new THREE.GridHelper( 400, 40, 0x0000ff, 0x808080 );
-
-    if(render_data.draw_vol || render_data.draw_surf)
-    {
-      const cmin = render_data.funcmin;
-      const cmax = render_data.funcmax;
-      gui_status.colormap_min = cmin;
-      gui_status.colormap_max = cmax;
-      this.gui_status_default.colormap_min = cmin;
-      this.gui_status_default.colormap_max = cmax;
-      this.gui_status_default.autoscale = render_data.autoscale || false;
-
-      gui_status.autoscale = this.gui_status_default.autoscale;
-      this.c_autoscale = gui.add(gui_status, "autoscale");
-      this.c_cmin = gui.add(gui_status, "colormap_min");
-      this.c_cmin.onChange(animate);
-      this.c_cmax = gui.add(gui_status, "colormap_max");
-      this.c_cmax.onChange(animate);
-
-      this.c_autoscale.onChange((checked)=> {
-        if(checked)
-          this.updateColormapToAutoscale();
-      });
-
-      if(cmax>cmin)
-        this.setStepSize(cmin, cmax);
-
-      gui.add(gui_status, "colormap_ncolors", 2, 32,1).onChange(animate);
-    }
 
     if(this.funcdim>0 && this.colormap_object == null)
         this.colormap_object = new ColormapObject(this.render_data, this.uniforms, this.container, this.gui_status);
@@ -479,7 +385,7 @@ export class Scene extends WebGLScene {
     {
       this.gui_status_default.eval = 5;
       gui_status.eval = 5;
-      this.c_eval = gui.add(gui_status, "eval", {"real": 5,"imag":6,"norm":3}).onChange(animate);
+      this.gui.c_eval = gui.add(gui_status, "eval", {"real": 5,"imag":6,"norm":3}).onChange(animate);
 
       let cgui = gui.addFolder("Complex");
       this.phase_controller = cgui.add(gui_status.Complex, "phase", 0, 2*Math.PI, 0.001).onChange(animate);
@@ -490,24 +396,24 @@ export class Scene extends WebGLScene {
     else if(render_data.funcdim==2)
     {
         gui_status.eval = 3;
-        this.c_eval = gui.add(gui_status, "eval", {"0": 0,"1":1,"norm":3}).onChange(animate);
+        this.gui.c_eval = gui.add(gui_status, "eval", {"0": 0,"1":1,"norm":3}).onChange(animate);
     }
     else if(render_data.funcdim==3)
     {
         gui_status.eval = 3;
-        this.c_eval = gui.add(gui_status, "eval", {"0": 0,"1":1,"2":2,"norm":3}).onChange(animate);
+        this.gui.c_eval = gui.add(gui_status, "eval", {"0": 0,"1":1,"2":2,"norm":3}).onChange(animate);
     }
 
-    if(this.c_eval)
+    if(this.gui.c_eval)
     {
       if(render_data.eval != undefined)
       {
         this.gui_status_default.eval = render_data.eval;
-        this.c_eval.setValue(render_data.eval);
+        this.gui.c_eval.setValue(render_data.eval);
       }
-      this.c_eval.onChange(()=> {
+      this.gui.c_eval.onChange(()=> {
         if(gui_status.autoscale)
-          this.updateColormapToAutoscale();
+          this.gui.updateColormapToAutoscale();
       });
     }
 
@@ -679,7 +585,7 @@ export class Scene extends WebGLScene {
     //   gui_misc.add(gui_status.Misc, "stats", {"none":-1, "FPS":0, "ms":1, "memory":2}).onChange(function(show_fps) {
     //       stats.showPanel( parseInt(show_fps) );
     //   });
-    let gui_functions = this.gui_functions;
+    let gui_functions = this.gui.gui_functions;
     gui_functions['reset settings'] = () =>{
       this.setGuiSettings(this.gui_status_default);
     };
@@ -828,14 +734,14 @@ export class Scene extends WebGLScene {
           this.gui_status.colormap_min = cmin;
           this.gui_status.colormap_max = cmax;
         }
-        this.c_cmin.updateDisplay();
-        this.c_cmax.updateDisplay();
+        this.gui.c_cmin.updateDisplay();
+        this.gui.c_cmax.updateDisplay();
 
         this.colormap_object.update(this.gui_status);
       }
 
       if(cmax>cmin)
-        this.setStepSize(cmin, cmax);
+        this.gui.setStepSize(cmin, cmax);
     }
 
     this.animate();
@@ -879,12 +785,12 @@ export class Scene extends WebGLScene {
       {
         this.gui_status.colormap_min = cmin;
         this.gui_status.colormap_max = cmax;
-        this.c_cmin.updateDisplay();
-        this.c_cmax.updateDisplay();
+        this.gui.c_cmin.updateDisplay();
+        this.gui.c_cmax.updateDisplay();
       }
 
       if(cmax>cmin)
-        this.setStepSize(cmin, cmax);
+        this.gui.setStepSize(cmin, cmax);
     }
 
     this.animate();
