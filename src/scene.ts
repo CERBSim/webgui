@@ -353,8 +353,11 @@ export class Scene extends WebGLScene {
 
     // const grid = new THREE.GridHelper( 400, 40, 0x0000ff, 0x808080 );
 
-    if(this.funcdim>0 && this.colormap_object == null)
+    if(this.colormap_object == null) {
         this.colormap_object = new ColormapObject(this.render_data, this.uniforms, this.container, this.gui_status);
+
+        this.colormap_object.updateTexture(gui_status);
+    }
 
     uniforms.n_segments = new THREE.Uniform(5);
     if(render_data.edges.length)
@@ -462,6 +465,12 @@ export class Scene extends WebGLScene {
         else
             console.log("render data not clipping found!!!");
 
+      gui_clipping.add(gui_status.Clipping, "enable").onChange(animate);
+      gui_clipping.add(gui_status.Clipping, "x", -1.0, 1.0).onChange(animate);
+      gui_clipping.add(gui_status.Clipping, "y", -1.0, 1.0).onChange(animate);
+      gui_clipping.add(gui_status.Clipping, "z", -1.0, 1.0).onChange(animate);
+      gui_clipping.add(gui_status.Clipping, "dist", -1.2*this.mesh_radius, 1.2*this.mesh_radius).onChange(animate);
+    }
 
     if(render_data.show_mesh)
     {
@@ -470,13 +479,6 @@ export class Scene extends WebGLScene {
       gui.add(gui_status, "elements").onChange(animate);
     }
 
-
-      gui_clipping.add(gui_status.Clipping, "enable").onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "x", -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "y", -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "z", -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "dist", -1.2*this.mesh_radius, 1.2*this.mesh_radius).onChange(animate);
-    }
 
     let draw_vectors = render_data.funcdim>1 && !render_data.is_complex;
     draw_vectors = draw_vectors && (render_data.draw_surf && render_data.mesh_dim==2 || render_data.draw_vol && render_data.mesh_dim==3);

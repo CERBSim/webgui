@@ -14,6 +14,11 @@ export class MeshFunctionObject extends THREE.Mesh {
     buffer_geometry: THREE.BufferGeometry;
 
     constructor(data, global_uniforms) {
+        if(data===undefined) {
+            // make clone() work
+            super();
+            return;
+        }
         const have_deformation = data.mesh_dim == data.funcdim && !data.is_complex;
         const have_z_deformation = data.mesh_dim == 2 && data.funcdim>0;
         const mesh_only = data.funcdim==0;

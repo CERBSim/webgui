@@ -26,7 +26,6 @@ function makeSelectedFaceTexture(data, bnds = [], col_selected = [0,0.5,1.0], co
 }
 
 function makeMeshColormapTexture(data, n_colors) {
-    console.log("update colormap for mesh");
     // Drawing only a mesh -> colors are given explicitly in render data (or just use green)
     var n_colors = data.mesh_regions_2d;
     var colormap_data = new Float32Array(3*n_colors);
@@ -108,9 +107,16 @@ export class ColormapObject extends THREE.Mesh {
     label_style: string;
 
     constructor(data, uniforms, container, gui_status) {
-        var geo = new THREE.PlaneGeometry(1., 0.07).translate(0.5,0,0);
-        var material = new THREE.MeshBasicMaterial({depthTest: false, side: THREE.DoubleSide, wireframe: false});
-        super( geo, material );
+        const mesh_only = data.funcdim==0;
+
+        if(!mesh_only) {
+            var geo = new THREE.PlaneGeometry(1., 0.07).translate(0.5,0,0);
+            var material = new THREE.MeshBasicMaterial({depthTest: false, side: THREE.DoubleSide, wireframe: false});
+            super( geo, material );
+        }
+        else {
+            super( );
+        }
 
         this.uniforms = uniforms;
         this.data = data;
@@ -130,7 +136,7 @@ export class ColormapObject extends THREE.Mesh {
         container.appendChild(labels_object);
         this.updateLabels(gui_status);
         this.mesh_material = material;
-        this.mesh_only = data.funcdim==0;
+        this.mesh_only = mesh_only;
         this.container = container;
         this.label_style  = '-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; onselectstart="return false;';
         this.label_style += 'onmousedown="return false; user-select:none;-o-user-select:none;unselectable="on";';
@@ -147,11 +153,14 @@ export class ColormapObject extends THREE.Mesh {
             this.max_ = gui_status.colormap_max;
             this.n_colors = gui_status.colormap_ncolors;
             this.updateTexture(gui_status);
-            this.updateLabels(gui_status);
+            if(!this.mesh_only)
+                this.updateLabels(gui_status);
         }
     }
 
     onResize(w,h) {
+        if(this.mesh_only)
+            return;
         const aspect = w/h;
         const x0 = -aspect*0.93;
         const y0 = 0.93;
@@ -186,7 +195,8 @@ export class ColormapObject extends THREE.Mesh {
             this.uniforms.tex_colormap = {value: null};
 
         this.uniforms.tex_colormap.value = tex;
-        this.mesh_material.map = tex;
+        if(!this.mesh_only)
+            this.mesh_material.map = tex;
     }
 
     updateLabels(gui_status) {

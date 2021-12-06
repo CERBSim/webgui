@@ -69,7 +69,7 @@ export class ThickEdgesObject extends THREE.Mesh {
         if(gui_status.subdivision !== undefined) {
             const sd = gui_status.subdivision;
             this.uniforms.n_segments.value = sd;
-            this.buffer_geometry.setDrawRange(0, 3*sd);
+            this.buffer_geometry.setDrawRange(0, 6*sd);
         }
     }
 
