@@ -13,6 +13,7 @@ export class ThickEdgesObject extends THREE.Mesh {
     have_deformation: boolean;
     have_z_deformation: boolean;
     buffer_geometry: THREE.BufferGeometry;
+    name_ : string;
 
     constructor(data, global_uniforms) {
         const have_deformation = data.mesh_dim == data.funcdim && !data.is_complex;
@@ -59,7 +60,7 @@ export class ThickEdgesObject extends THREE.Mesh {
         });
 
         super(geo, wireframe_material);
-        super.name = data.name;
+        this.name_ = data.name;
         this.buffer_geometry = geo;
         this.uniforms = uniforms;
     }
@@ -101,5 +102,80 @@ export class ThickEdgesObject extends THREE.Mesh {
 
         geo.instanceCount = readB64(pdata[0]).length/4;
         geo.boundingSphere = new THREE.Sphere(data.mesh_center, data.mesh_radius);
+    }
+}
+
+export class LinesObject extends THREE.LineSegments {
+    data : Object;
+    buffer_geometry: THREE.BufferGeometry;
+    name_ : string;
+
+    constructor(data) {
+        var geo = new THREE.BufferGeometry();
+
+        geo.setAttribute( 'position', new THREE.Float32BufferAttribute( data.position, 3 ));
+        const color = data.color || 0x000000;
+
+        var material = new THREE.LineBasicMaterial({ color });
+
+        super(geo, material);
+        this.name_ = data.name;
+        this.buffer_geometry = geo;
+    }
+
+    update(gui_status) {
+        super.visible = gui_status.Objects[this.name_];
+    }
+
+    updateRenderData(data, data2, t) {
+        this.data = data;
+        this.buffer_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( data.position, 3 ));
+    }
+}
+
+export class PointsObject extends THREE.Points {
+    data : Object;
+    buffer_geometry: THREE.BufferGeometry;
+    name_ : string;
+
+    constructor(data) {
+        const color = new THREE.Color(data.color || 0x808080);
+        const n = 101;
+        const tdata = new Uint8Array(4*n*n);
+        for(var i=0; i<n; i++)
+          for(var j=0; j<n; j++) {
+              const dist = n*n/4-((i-n/2)*(i-n/2)+(j-n/2)*(j-n/2));
+              if(dist>0.0) {
+                  tdata[4*(i*n+j)+0] = color.r*255;
+                  tdata[4*(i*n+j)+1] = color.g*255;
+                  tdata[4*(i*n+j)+2] = color.b*255;
+                  tdata[4*(i*n+j)+3] = 255;
+              }
+              else {
+                  for(var k=0; k<4; k++)
+                      tdata[4*(i*n+j)+k] = 0;
+              }
+          }
+
+        let texture = new THREE.DataTexture( tdata, n, n, THREE.RGBAFormat);
+        var geo = new THREE.BufferGeometry();
+
+        geo.setAttribute( 'position', new THREE.Float32BufferAttribute( data.position, 3 ));
+        const size = data.size || 15;
+
+        var material = new THREE.PointsMaterial( { size, sizeAttenuation: false, map: texture, alphaTest: 0.5, transparent: true  } );
+
+        super(geo, material);
+        this.name_ = data.name;
+        this.buffer_geometry = geo;
+    }
+
+    update(gui_status) {
+        super.visible = gui_status.Objects[this.name_];
+    }
+
+    updateRenderData(data, data2, t) {
+        this.data = data;
+        this.buffer_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( data.position, 3 ));
     }
 }

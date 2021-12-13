@@ -11,7 +11,7 @@ import {
     ClippingFunctionObject,
 } from './mesh';
 
-import { ThickEdgesObject } from './edges';
+import { PointsObject, LinesObject, ThickEdgesObject } from './edges';
 import { ColormapObject } from './colormap';
 import { CameraControls } from './camera';
 
@@ -25,6 +25,15 @@ import * as dat from 'dat.gui';
 const css = require('./styles.css');
 
 export {THREE};
+
+function makeRenderObject( obj ) {
+    switch(obj.type) {
+        case "lines":
+            return new LinesObject(obj);
+        case "points":
+            return new PointsObject(obj);
+    }
+}
 
 export class Scene extends WebGLScene {
 
@@ -58,6 +67,7 @@ export class Scene extends WebGLScene {
   axes_object: any;
   center_tag: any;
   grid: any;
+  render_objects: any = [];
 
   is_complex: boolean;
   trafo: any;
@@ -247,6 +257,7 @@ export class Scene extends WebGLScene {
     this.edges_object = null;
     this.wireframe_object = null;
     this.mesh_object = null;
+    this.render_objects = [];
     this.clipping_function_object = null;
     this.clipping_vectors_object = null;
     this.axes_object = null;
@@ -479,6 +490,21 @@ export class Scene extends WebGLScene {
       gui.add(gui_status, "elements").onChange(animate);
     }
 
+    if(render_data.objects) {
+      gui_status.Objects = {};
+      let gui_objects = gui.addFolder("Objects");
+      const objects = render_data.objects;
+      for (let i=0; i<objects.length; i++) {
+          const obj = makeRenderObject(objects[i]);
+          this.render_objects.push( obj );
+          this.pivot.add( obj );
+          const name = objects[i].name;
+          if(!(name in gui_status.Objects)) {
+              gui_status.Objects[name] = true;
+              gui_objects.add(gui_status.Objects, name).onChange(animate);
+          }
+      }
+    }
 
     let draw_vectors = render_data.funcdim>1 && !render_data.is_complex;
     draw_vectors = draw_vectors && (render_data.draw_surf && render_data.mesh_dim==2 || render_data.draw_vol && render_data.mesh_dim==3);
@@ -714,6 +740,9 @@ export class Scene extends WebGLScene {
     if(this.mesh_object != null)
         this.mesh_object.updateRenderData(render_data);
 
+    for (let i=0; i<this.render_objects.length; i++)
+        this.render_objects[i].updateRenderData( render_data.objects[i] );
+
     if(this.clipping_function_object != null)
         this.clipping_function_object.updateRenderData(render_data);
 
@@ -771,6 +800,10 @@ export class Scene extends WebGLScene {
 
     if(this.mesh_object != null)
         this.mesh_object.updateRenderData(rd, rd2, t);
+
+    if(rd2.objects)
+        for (let i=0; i<this.render_objects.length; i++)
+            this.render_objects[i].updateRenderData( rd.objects[i], rd2.objects[i], t );
 
     if(this.clipping_function_object != null)
         this.clipping_function_object.updateRenderData(rd, rd2, t);
@@ -968,6 +1001,9 @@ export class Scene extends WebGLScene {
 
     if( this.mesh_object != null )
       this.mesh_object.update(gui_status);
+
+    for (let i=0; i<this.render_objects.length; i++)
+        this.render_objects[i].update(gui_status);
 
     if( this.colormap_object != null )
       this.colormap_object.update(gui_status);
