@@ -69,14 +69,20 @@ export class WebGLScene {
   render(){}
 }
 
+export function readB64Raw(base64) {
+    if(typeof(base64) == 'object')
+        return base64;
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return  bytes.buffer;
+}
+
 export function readB64(base64) {
-  var binary_string = window.atob(base64);
-  var len = binary_string.length;
-  var bytes = new Uint8Array(len);
-  for (var i = 0; i < len; i++) {
-    bytes[i] = binary_string.charCodeAt(i);
-  }
-  return new Float32Array( bytes.buffer );
+    return new Float32Array( readB64Raw(base64) );
 }
 
 export function setKeys (dst, src) {

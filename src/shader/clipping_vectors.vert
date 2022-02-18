@@ -118,12 +118,8 @@ void CutElement3d()
     {
       p[i] = psub[i].x*p0 + psub[i].y*p1 + psub[i].z*p2 + psub[i].w*p3;
       v[i].x = p[i].w;
+      v[i].yz = psub[i].x*v0_1.xy + psub[i].y*v0_1.zw + psub[i].z*v2_3.xy + psub[i].w*v2_3.zw;
     }
-
-    v[0].yz = v0_1.xy;
-    v[1].yz = v0_1.zw;
-    v[2].yz = v2_3.xy;
-    v[3].yz = v2_3.zw;
 #else // ORDER==1
     for (int i=0; i<4; ++i)
     {

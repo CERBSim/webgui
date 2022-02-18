@@ -1,11 +1,141 @@
 import {
   getShader,
   readB64,
+  readB64Raw,
   mixB64,
   MAX_SUBDIVISION,
 } from './utils';
 
 import * as THREE from 'three';
+
+function unpackEdgeData(edge_data, vertices, values, funcdim) {
+    let edges = new Int32Array( readB64Raw(edge_data));
+    let ncomps = 2;
+    if(funcdim>1)
+        ncomps += 2;
+
+    let edge_points = new Array(ncomps);
+    for (var i_comp = 0; i_comp < ncomps; i_comp++)
+    edge_points[i_comp] = [];
+
+    const nvert = edges.length;
+
+    for (var i_vert = 0; i_vert < nvert; i_vert++) {
+        let vi = edges[i_vert];
+        // add vertex coordinates and first function value
+        for (var k = 0; k < 3; k++)
+            edge_points[i_vert%2].push(vertices[3*vi+k]);
+
+        // add first function value (4th component of attribute p0,p1,p2 for each vertex)
+        edge_points[i_vert%2].push(values[funcdim*vi]);
+
+        // add other function values to extra attributes (v0,v1,v2)
+        for (var k = 1; k < funcdim; k++) {
+            edge_points[2+i_vert%2].push(values[funcdim*vi+k]);
+        }
+    }
+    return edge_points;
+}
+
+export function unpackIndexedData( data ) {
+    let need_unpack = false;
+
+    if( data.draw_surf && data.Bezier_points === undefined )
+        need_unpack = true;
+
+    if( data.draw_surf && data.Bezier_trig_points === undefined )
+        need_unpack = true;
+
+    if( data.draw_vol && data.points3d === undefined )
+        need_unpack = true;
+
+    if(!need_unpack)
+        return;
+
+    var startTime = performance.now();
+    const vertices = readB64(data.vertices);
+    const values = readB64(data.nodal_function_values);
+    const funcdim = data.funcdim;
+    data.vertices = vertices;
+    data.nodal_function_values = values;
+
+    if(data.show_wireframe)
+        data.Bezier_points = unpackEdgeData(data.wireframe, vertices, values, funcdim);
+
+    if(data.segs)
+        data.edges = unpackEdgeData(data.wireframe, vertices, values, funcdim);
+
+    if(data.draw_surf) {
+        let trigs = new Int32Array( readB64Raw(data.trigs));
+        data.trigs = trigs;
+        let ncomps = 3;
+        if(funcdim>1)
+            ncomps += 3;
+
+        let trig_points = new Array(ncomps);
+        for (var i_comp = 0; i_comp < ncomps; i_comp++)
+        trig_points[i_comp] = [];
+
+        const nvert = trigs.length;
+
+        for (var i_vert = 0; i_vert < nvert; i_vert++) {
+            let vi = trigs[i_vert];
+            // add vertex coordinates and first function value
+            for (var k = 0; k < 3; k++)
+                trig_points[i_vert%3].push(vertices[3*vi+k]);
+
+            // add first function value (4th component of attribute p0,p1,p2 for each vertex)
+            trig_points[i_vert%3].push(values[funcdim*vi]);
+
+            // add other function values to extra attributes (v0,v1,v2)
+            for (var k = 1; k < funcdim; k++)
+                trig_points[3+i_vert%3].push(values[funcdim*vi+k]);
+            for (k = funcdim; k < 5; k++)
+                trig_points[3+i_vert%3].push(0.0);
+        }
+
+        data.Bezier_trig_points = trig_points;
+    }
+
+    if(data.draw_vol) {
+        let ncomps = 4;
+        if(funcdim>1)
+            ncomps += 2;
+
+        let tets = new Int32Array( readB64Raw(data.tets));
+        let tet_points = new Array(ncomps);
+        for (var i_comp = 0; i_comp < ncomps; i_comp++)
+            tet_points[i_comp] = [];
+
+        const nvert = tets.length;
+        data.tets = tets;
+
+        for (var i_vert = 0; i_vert < nvert; i_vert++) {
+            let vi = tets[i_vert];
+            let icomp = i_vert%4;
+
+            // add vertex coordinates and first function value
+            for (var k = 0; k < 3; k++)
+                tet_points[icomp].push(vertices[3*vi+k]);
+
+            // add first function value (4th component of attribute p0,p1,p2 for each vertex)
+            tet_points[icomp].push(values[funcdim*vi]);
+
+            icomp = 4 + Math.floor(icomp/2);
+            // add other function values to extra attributes (v0_1,v2_3)
+            for (var k = 1; k < 3; k++) {
+                const val = k<funcdim ? values[funcdim*vi+k] : 0.0;
+                tet_points[icomp].push(val);
+            }
+        }
+
+        data.points3d = tet_points;
+    }
+
+    var endTime = performance.now()
+    console.log(`Unpacking nodal data took ${endTime - startTime} milliseconds`);
+    return data;
+}
 
 export class MeshFunctionObject extends THREE.Mesh {
     uniforms : any;

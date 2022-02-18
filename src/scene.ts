@@ -9,6 +9,7 @@ import {
     MeshFunctionObject,
     WireframeObject,
     ClippingFunctionObject,
+    unpackIndexedData,
 } from './mesh';
 
 import { PointsObject, LinesObject, ThickEdgesObject } from './edges';
@@ -244,6 +245,8 @@ export class Scene extends WebGLScene {
 
   initRenderData (render_data)
   {
+    unpackIndexedData(render_data);
+
     if(this.gui!=null)
         this.gui.destroy();
 
