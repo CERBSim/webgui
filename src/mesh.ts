@@ -30,9 +30,10 @@ function unpackEdgeData(edge_data, vertices, values, funcdim) {
         edge_points[i_vert%2].push(values[funcdim*vi]);
 
         // add other function values to extra attributes (v0,v1,v2)
-        for (var k = 1; k < funcdim; k++) {
-            edge_points[2+i_vert%2].push(values[funcdim*vi+k]);
-        }
+        if(ncomps>2)
+            for (var k = 1; k < funcdim; k++) {
+                edge_points[2+i_vert%2].push(values[funcdim*vi+k]);
+            }
     }
     return edge_points;
 }
@@ -88,10 +89,12 @@ export function unpackIndexedData( data ) {
             trig_points[i_vert%3].push(values[funcdim*vi]);
 
             // add other function values to extra attributes (v0,v1,v2)
-            for (var k = 1; k < funcdim; k++)
-                trig_points[3+i_vert%3].push(values[funcdim*vi+k]);
-            for (k = funcdim; k < 5; k++)
-                trig_points[3+i_vert%3].push(0.0);
+            if(ncomps>3) {
+                for (var k = 1; k < funcdim; k++)
+                    trig_points[3+i_vert%3].push(values[funcdim*vi+k]);
+                for (k = funcdim; k < 5; k++)
+                    trig_points[3+i_vert%3].push(0.0);
+            }
         }
 
         data.Bezier_trig_points = trig_points;
@@ -121,11 +124,13 @@ export function unpackIndexedData( data ) {
             // add first function value (4th component of attribute p0,p1,p2 for each vertex)
             tet_points[icomp].push(values[funcdim*vi]);
 
-            icomp = 4 + Math.floor(icomp/2);
-            // add other function values to extra attributes (v0_1,v2_3)
-            for (var k = 1; k < 3; k++) {
-                const val = k<funcdim ? values[funcdim*vi+k] : 0.0;
-                tet_points[icomp].push(val);
+            if(ncomps>4) {
+                icomp = 4 + Math.floor(icomp/2);
+                // add other function values to extra attributes (v0_1,v2_3)
+                for (var k = 1; k < 3; k++) {
+                    const val = k<funcdim ? values[funcdim*vi+k] : 0.0;
+                    tet_points[icomp].push(val);
+                }
             }
         }
 
