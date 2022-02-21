@@ -71,7 +71,14 @@ export class WebGLScene {
 
 export function readB64Raw(base64) {
     if(typeof(base64) == 'object')
-        return base64;
+    {
+        switch(base64.constructor.name) {
+            case 'DataView': // binary buffer (used for jupyter widgets)
+                return base64.buffer;
+            default:
+                return base64;
+        }
+    }
     var binary_string = window.atob(base64);
     var len = binary_string.length;
     var bytes = new Uint8Array(len);
