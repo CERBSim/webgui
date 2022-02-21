@@ -382,20 +382,20 @@ export class Scene extends WebGLScene {
       gui.add(gui_status, "edges").onChange(animate);
     }
 
-    if(render_data.show_wireframe && render_data.Bezier_points.length>0)
-    {
-      this.wireframe_object = new WireframeObject(render_data, uniforms);
-      this.pivot.add(this.wireframe_object);
-      gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
-      gui.add(gui_status, "mesh").onChange(animate);
-    }
-
     if(this.have_z_deformation || this.have_deformation)
     {
       this.gui_status_default.deformation = render_data.deformation ? 1.0 : 0.0;
       gui_status.deformation = this.gui_status_default.deformation;
       gui.add(gui_status, "deformation", 0.0, 1.0, 0.0001).onChange(animate);
       uniforms.deformation = new THREE.Uniform( gui_status.deformation );
+    }
+
+    if(render_data.show_wireframe && render_data.Bezier_points.length>0)
+    {
+      this.wireframe_object = new WireframeObject(render_data, uniforms);
+      this.pivot.add(this.wireframe_object);
+      gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
+      gui.add(gui_status, "mesh").onChange(animate);
     }
 
     if(render_data.is_complex)
