@@ -316,7 +316,7 @@ export class WireframeObject extends THREE.Line {
     }
 
     update(gui_status) {
-        super.visible = gui_status.elements;
+        super.visible = gui_status.mesh;
         if(gui_status.subdivision !== undefined) {
             const sd = gui_status.subdivision;
             this.uniforms.n_segments.value = sd;
