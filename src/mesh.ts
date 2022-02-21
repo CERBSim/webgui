@@ -59,15 +59,13 @@ export function unpackIndexedData( data ) {
     const funcdim = data.funcdim;
     data.vertices = vertices;
     data.nodal_function_values = values;
-
-    if(data.show_wireframe)
-        data.Bezier_points = unpackEdgeData(data.wireframe, vertices, values, funcdim);
+    let trigs = undefined;
 
     if(data.segs)
-        data.edges = unpackEdgeData(data.wireframe, vertices, values, funcdim);
+        data.edges = unpackEdgeData(data.segs, vertices, values, funcdim);
 
     if(data.draw_surf) {
-        let trigs = new Int32Array( readB64Raw(data.trigs));
+        trigs = new Int32Array( readB64Raw(data.trigs));
         data.trigs = trigs;
         let ncomps = 3;
         if(funcdim>1)
@@ -98,6 +96,18 @@ export function unpackIndexedData( data ) {
         }
 
         data.Bezier_trig_points = trig_points;
+    }
+
+    if(data.show_wireframe && trigs) {
+        const ntrigs = Math.floor(trigs.length/3);
+
+        let edges = [];
+        for (var i = 0; i < ntrigs; i++) {
+            for (var k = 0; k < 3; k++) {
+                edges.push(trigs[3*i+k], trigs[3*i+(k+1)%3]);
+            }
+        }
+        data.Bezier_points = unpackEdgeData(edges, vertices, values, funcdim);
     }
 
     if(data.draw_vol) {
