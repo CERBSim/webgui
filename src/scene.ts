@@ -213,7 +213,7 @@ export class Scene extends WebGLScene {
   updateGridsize()
   {
     const n = this.gui_status.Vectors.grid_size;
-    this.buffer_texture = new THREE.WebGLRenderTarget( n, n, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.HalfFloatType, format: THREE.RGBAFormat });
+    this.buffer_texture = new THREE.WebGLRenderTarget( n, n, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
     this.uniforms.tex_values = new THREE.Uniform(this.buffer_texture.texture);
     let r = this.mesh_radius;
     this.buffer_camera = new THREE.OrthographicCamera( -r, r, r, -r, -10, 10 );
