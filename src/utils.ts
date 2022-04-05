@@ -60,11 +60,20 @@ export class WebGLScene {
 
   }
 
-  animate () {
+  async animate (cancel_existing_request=false) {
+    if(this.requestId != 0 && cancel_existing_request) {
+        cancelAnimationFrame(this.requestId);
+        this.requestId = 0;
+    }
     // Don't request a frame if another one is currently in the pipeline
-    if(this.requestId === 0)
-      this.requestId = requestAnimationFrame( ()=>this.render() );
+    if(this.requestId === 0) {
+        await new Promise(resolve => {
+            this.requestId = requestAnimationFrame(resolve);
+        });
+        this.render();
+    }
   }
+
 
   render(){}
 }

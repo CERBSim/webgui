@@ -73,7 +73,6 @@ export class Scene extends WebGLScene {
   is_complex: boolean;
   trafo: any;
   mouse: THREE.Vector2;
-  get_pixel: boolean;
 
   last_frame_time: number;
 
@@ -100,7 +99,6 @@ export class Scene extends WebGLScene {
   mesh_only: boolean;
 
   version_object: any;
-  get_face_index: boolean;
   index_render_target: any;
 
   constructor() {
@@ -346,7 +344,6 @@ export class Scene extends WebGLScene {
     this.trafo = new THREE.Vector2(1.0/2.0/(this.mesh_center.length()+this.mesh_radius), 1.0/2.0);
     uniforms.trafo = new THREE.Uniform(this.trafo);
 
-    this.get_pixel = false;
     this.mouse = new THREE.Vector2(0.0, 0.0);
     this.center_tag = null;
 
@@ -880,15 +877,14 @@ export class Scene extends WebGLScene {
     }
   }
 
-  getIndexAtCursor() {
+  async getMeshIndex(x,y) {
+    await this.animate(true);
     let index = -1;
     if(this.mesh_only) {
         const pixels = new Float32Array(4);
         const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
         const h = this.renderer.domElement.height;
         var rect = this.canvas.getBoundingClientRect();
-        const x = this.mouse.x;
-        const y = this.mouse.y;
 
         // render face index to texture (for mouse selection)
         const function_mode = this.uniforms.function_mode.value;
@@ -930,7 +926,7 @@ export class Scene extends WebGLScene {
                 this.tooltip.textContent = text;
                 this.tooltip.style.visibility = "visible";
                 this.tooltip.style.left = `${x}px`;
-                this.tooltip.style.top = `${y}px`;
+                this.tooltip.style.top = `${y+20}px`;
             }
         }
         else
@@ -945,15 +941,12 @@ export class Scene extends WebGLScene {
     return index;
   }
 
+  async getPixelCoordinates (x,y) {
+      await this.animate(true);
 
-  render() {
-    let now = new Date().getTime();
-    let frame_time = 0.001*(new Date().getTime() - this.last_frame_time );
-
-    if (this.get_pixel) {
       this.uniforms.render_depth.value = true;
       this.camera.setViewOffset( this.renderer.domElement.width, this.renderer.domElement.height,
-        this.mouse.x * window.devicePixelRatio | 0, this.mouse.y * window.devicePixelRatio | 0, 1, 1 );
+        x * window.devicePixelRatio | 0, y * window.devicePixelRatio | 0, 1, 1 );
       this.renderer.setRenderTarget(this.render_target);
       this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));
       this.renderer.clear(true, true, true);
@@ -962,21 +955,21 @@ export class Scene extends WebGLScene {
 
       let pixel_buffer = new Float32Array( 4 );
       this.context.readPixels(0, 0, 1, 1, this.context.RGBA, this.context.FLOAT, pixel_buffer);
-      if (pixel_buffer[3]==1){
-        this.controls.center.copy(this.mesh_center);
-      }else{
-        for (var i=0; i<3; i++){
-          this.controls.center.setComponent(i, (pixel_buffer[i]-this.trafo.y)/this.trafo.x);
-        }
-      }
       this.camera.clearViewOffset();
 
-      this.setCenterTag(this.controls.center);
-      this.handleEvent('selectpoint', [this, this.controls.center] );
-      this.mouse.set(0.0, 0.0);
-      this.get_pixel = false;
+      if (pixel_buffer[3]!==1){
+        let p = new THREE.Vector3();
+        for (var i=0; i<3; i++){
+          p.setComponent(i, (pixel_buffer[i]-this.trafo.y)/this.trafo.x);
+        }
+        return p;
+      }
+      return null;
+  }
 
-    }
+  render() {
+    let now = new Date().getTime();
+    let frame_time = 0.001*(new Date().getTime() - this.last_frame_time );
 
     this.requestId = 0;
 
@@ -1080,11 +1073,6 @@ export class Scene extends WebGLScene {
     uniforms.light_mat.value.y = gui_status.Light.diffuse;
     uniforms.light_mat.value.z = gui_status.Light.shininess;
     uniforms.light_mat.value.w = gui_status.Light.specularity;
-
-    if (this.get_face_index) {
-        this.getIndexAtCursor();
-        this.get_face_index = false;
-    }
 
     this.renderer.setRenderTarget(null);
     this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));

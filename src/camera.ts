@@ -3,22 +3,29 @@ import * as THREE from 'three';
 // not to change from outside
 const changeEvent = { type: 'change' };
 
+function wrapTransformation( mat, vec ) {
+    let v1 = new THREE.Matrix4();
+    let v2 = new THREE.Matrix4();
+    v1.makeTranslation( vec.x, vec.y, vec.z );
+    v2.makeTranslation( -vec.x, -vec.y, -vec.z );
+    mat.premultiply(v1);
+    mat.multiply(v2);
+    return mat;
+}
+
 export class CameraControls extends THREE.EventDispatcher {
     domElement: any;
     oldtouch:any = new THREE.Vector2(0,0);
     olddelta:any = 0;
     touchfirst:any = true;
+    touchnum:any = 0;
     scene: any;
     center: any;
     mesh_radius: any;
     cameraObject: any;
     pivotObject: any;
 
-    transmat = new THREE.Matrix4();
-    rotmat = new THREE.Matrix4();
-    centermat = new THREE.Matrix4();
-    transformationmat = new THREE.Matrix4();
-    scale: number;
+    mat = new THREE.Matrix4();
     mode = null;
     rotation_step_degree = 0.05;
     pan_step = 0.05;
@@ -37,8 +44,9 @@ export class CameraControls extends THREE.EventDispatcher {
         this.scene = scene;
         this.mesh_radius = scene.mesh_radius;
         this.center = scene.mesh_center.clone();
-        this.scale = 1.0/this.mesh_radius;
-        this.centermat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
+        const s = 1.0/this.mesh_radius;
+        this.mat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
+        this.mat.premultiply(new THREE.Matrix4().makeScale(s,s,s));
 
         this.cameraObject = cameraObject;
         this.pivotObject = scene.pivot;
@@ -53,6 +61,7 @@ export class CameraControls extends THREE.EventDispatcher {
         window.addEventListener( 'mousemove', (e)=>this.onMouseMove(e), false );
 
         this.domElement.addEventListener( 'touchmove', (e)=>this.onTouchMove(e), false );
+        this.domElement.addEventListener( 'touchstart', (e)=>this.onTouchStart(e), false );
 
         //   window.addEventListener( 'keydown', keydown, false );
         this.domElement.addEventListener( 'wheel', (e)=>this.wheel(e), false );
@@ -64,23 +73,21 @@ export class CameraControls extends THREE.EventDispatcher {
     }
 
     reset() {
-        this.transmat.identity();
-        this.rotmat.identity();
-        this.centermat.identity();
-        this.transformationmat.identity();
-        this.scale = 1.0/this.mesh_radius;
+        const s = 1.0/this.mesh_radius;
         this.center.copy(this.scene.mesh_center);
-        this.centermat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
+        this.mat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
+        this.mat.premultiply(new THREE.Matrix4().makeScale(s,s,s));
+
         this.update();
         this.scene.setCenterTag();
     }
 
     update() {
-        var scale_vec = new THREE.Vector3();
-        scale_vec.setScalar(this.scale);
-        this.pivotObject.matrix.copy(this.transmat).multiply(this.rotmat).scale(scale_vec).multiply(this.centermat);
+        this.pivotObject.matrix.copy(this.mat);
         const aspect = this.domElement.offsetWidth/this.domElement.offsetHeight;
-        this.scene.axes_object.matrixWorld.makeTranslation(-0.85*aspect, -0.85, 0).multiply(this.rotmat);
+        let rotmat = new THREE.Matrix4();
+        rotmat.extractRotation(this.mat);
+        this.scene.axes_object.matrixWorld.makeTranslation(-0.85*aspect, -0.85, 0).multiply(rotmat);
 
         let vector = new THREE.Vector3();
         const rect = this.scene.canvas.getBoundingClientRect();
@@ -102,40 +109,46 @@ export class CameraControls extends THREE.EventDispatcher {
     rotateObject(axis, rad) {
         var mat = new THREE.Matrix4();
         mat.makeRotationAxis(axis, rad);
-        this.rotmat.premultiply(mat);
+        var transformed_center = this.center.clone();
+        transformed_center.applyMatrix4(this.mat);
+        wrapTransformation(mat, transformed_center);
+        this.mat.premultiply(mat);
     }
 
     panObject(dir, dist) {
         var mat = new THREE.Matrix4();
         mat.makeTranslation(dist*dir.x, dist*dir.y, dist*dir.z);
-        this.transmat.premultiply(mat);
+        this.mat.premultiply(mat);
     }
 
     updateCenter() {
-        console.log("set mesh center to", this.center);
-        this.centermat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
-        this.transmat.identity();
-        this.scene.setCenterTag();
+        let pos = new THREE.Vector3();
+        let rot = new THREE.Quaternion();
+        let scale = new THREE.Vector3();
+        this.mat.decompose(pos,rot,scale);
+
+        let rotmat = new THREE.Matrix4().makeRotationFromQuaternion(rot);
+        wrapTransformation(rotmat, this.center);
+
+        let s = scale.x;
+        let scalemat = wrapTransformation(new THREE.Matrix4().makeScale(s,s,s), this.center);
+        this.mat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
+        this.mat.multiply(rotmat);
+        this.mat.multiply(scalemat);
+
         this.update();
+        this.scene.setCenterTag();
     }
 
     loadSettings(settings) {
-        this.transmat.copy( settings.transmat );
-        this.rotmat.copy( settings.rotmat );
-        this.centermat.copy( settings.centermat );
-        this.transformationmat.copy( settings.transformationmat );
-        this.scale = settings.scale;
+        this.mat.copy( settings.mat );
         this.center.copy(settings.center);
         this.update();
         this.scene.setCenterTag();
     }
 
     storeSettings( settings ) {
-        settings.transmat = this.transmat;
-        settings.rotmat = this.rotmat;
-        settings.centermat = this.centermat;
-        settings.transformationmat = this.transformationmat;
-        settings.scale = this.scale;
+        settings.mat = this.mat;
         settings.center = this.center;
     }
 
@@ -200,14 +213,13 @@ export class CameraControls extends THREE.EventDispatcher {
 
     onMouseUp(event) {
         this.mode = null;
-        super.dispatchEvent( changeEvent );
+        // super.dispatchEvent( changeEvent );
 
         if(!this.did_move) {
             event.preventDefault();
             var rect = this.domElement.getBoundingClientRect();
-            this.scene.mouse.set(event.clientX-rect.left, event.clientY-rect.top);
-            this.scene.get_face_index = true;
-            super.dispatchEvent( changeEvent );
+            this.scene.getMeshIndex(event.clientX-rect.left, event.clientY-rect.top);
+            // super.dispatchEvent( changeEvent );
         }
     }
 
@@ -234,12 +246,19 @@ export class CameraControls extends THREE.EventDispatcher {
 
     onTouchStart(event) {
         this.touchfirst = true;
+        this.touchnum = event.targetTouches.length;
+        if (event.targetTouches.length == 2) {
+            this.oldtouch.x = 0.5*(event.touches[0].pageX+event.touches[1].pageX)
+            this.oldtouch.y = 0.5*(event.touches[0].pageY+event.touches[1].pageY)
+        }
     }
 
     onTouchMove(event) {
         event.preventDefault();
+        if(event.targetTouches.length != this.touchnum)
+            return;
 
-        switch ( event.touches.length ) {
+        switch ( event.targetTouches.length ) {
             case 1:
                 var pos = new THREE.Vector2(event.touches[0].pageX, event.touches[0].pageY);
                 if (!this.touchfirst) {
@@ -251,24 +270,46 @@ export class CameraControls extends THREE.EventDispatcher {
                 this.update();
                 break;
 
-            default: // 2 or more
+            case 2: // 2 or more
                 var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
                 var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
                 var delta = Math.sqrt( dx * dx + dy * dy );
+
+                const pos_x = 0.5*(event.touches[0].pageX+event.touches[1].pageX)
+                const move_x = pos_x-this.oldtouch.x;
+                const pos_y = 0.5*(event.touches[0].pageY+event.touches[1].pageY)
+                const move_y = pos_y-this.oldtouch.y;
+
                 if (!this.touchfirst) {
                     var s = Math.exp(0.01*(delta-this.olddelta));
-                    this.scale *=  s;
-                    if( this.scene.center_tag )
-                        this.scene.center_tag.scale.multiplyScalar(1.0/s);
+                    this.scale(s, pos_x, pos_y); // event.clientX, event.clientY);
+                    // if( this.scene.center_tag )
+                        //this.scene.center_tag.scale.multiplyScalar(1.0/s);
+                    this.panObject(new THREE.Vector3(1, 0, 0), 0.004*move_x);
+                    this.panObject(new THREE.Vector3(0, -1, 0), 0.004*move_y);
                 }
                 this.touchfirst = false;
                 this.update();
                 this.olddelta = delta;
+                this.oldtouch.x = pos_x;
+                this.oldtouch.y = pos_y;
                 break;
         }
     }
 
-    wheel(event) {
+    async scale(s, x, y) {
+        var rect = this.domElement.getBoundingClientRect();
+        let p = await this.scene.getPixelCoordinates(x-rect.left, y-rect.top);
+        p = p || this.center;
+
+        let m = new THREE.Matrix4().makeScale(s,s,s);
+        wrapTransformation(m, p);
+        this.mat.multiply(m);
+        this.update();
+        await this.scene.animate();
+    }
+
+    async wheel(event) {
         event.preventDefault();
         event.stopPropagation();
 
@@ -277,21 +318,23 @@ export class CameraControls extends THREE.EventDispatcher {
             dy *= 30;
 
         var s = Math.exp(-0.001*dy);
-        this.scale *=  s ;
-        if( this.scene.center_tag )
-            this.scene.center_tag.scale.multiplyScalar(1.0/s);
-        this.update();
+        this.scale(s, event.clientX, event.clientY);
     }
 
     contextmenu( event ) {
         event.preventDefault();
     }
 
-    onDblClick( event ){
+    async onDblClick( event ){
         event.preventDefault();
+        event.stopPropagation();
         var rect = this.domElement.getBoundingClientRect();
-        this.scene.mouse.set(event.clientX-rect.left, event.clientY-rect.top);
-        this.scene.get_pixel = true;
-        super.dispatchEvent( changeEvent );
+        const p = await this.scene.getPixelCoordinates(event.clientX-rect.left, event.clientY-rect.top);
+        if(p) {
+            this.scene.tooltip.style.visibility = "hidden";
+            this.center.copy(p);
+            this.updateCenter();
+            await this.scene.animate();
+        }
     }
 }
