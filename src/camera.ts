@@ -211,16 +211,15 @@ export class CameraControls extends THREE.EventDispatcher {
         event.stopPropagation();
     }
 
-    onMouseUp(event) {
+    async onMouseUp(event) {
         this.mode = null;
-        // super.dispatchEvent( changeEvent );
 
         if(!this.did_move) {
             event.preventDefault();
             var rect = this.domElement.getBoundingClientRect();
-            this.scene.getMeshIndex(event.clientX-rect.left, event.clientY-rect.top);
-            // super.dispatchEvent( changeEvent );
+            await this.scene.getMeshIndex(event.clientX-rect.left, event.clientY-rect.top);
         }
+        super.dispatchEvent( changeEvent );
     }
 
 
@@ -331,10 +330,10 @@ export class CameraControls extends THREE.EventDispatcher {
         var rect = this.domElement.getBoundingClientRect();
         const p = await this.scene.getPixelCoordinates(event.clientX-rect.left, event.clientY-rect.top);
         if(p) {
+            this.scene.uniforms.highlight_selected_face.value = false;
             this.scene.tooltip.style.visibility = "hidden";
             this.center.copy(p);
             this.updateCenter();
-            await this.scene.animate();
         }
     }
 }
