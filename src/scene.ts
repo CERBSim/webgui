@@ -12,7 +12,13 @@ import {
     unpackIndexedData,
 } from './mesh';
 
-import { PointsObject, LinesObject, ThickEdgesObject } from './edges';
+import {
+    PointsObject,
+    LinesObject,
+    ThickEdgesObject,
+    FieldLinesObject,
+} from './edges';
+
 import { ColormapObject } from './colormap';
 import { CameraControls } from './camera';
 
@@ -27,12 +33,14 @@ const css = require('./styles.css');
 
 export {THREE};
 
-function makeRenderObject( obj ) {
+function makeRenderObject( obj, global_uniforms ) {
     switch(obj.type) {
         case "lines":
             return new LinesObject(obj);
         case "points":
             return new PointsObject(obj);
+        case "fieldlines":
+            return new FieldLinesObject(obj, global_uniforms);
     }
 }
 
@@ -495,7 +503,7 @@ export class Scene extends WebGLScene {
       let gui_objects = gui.addFolder("Objects");
       const objects = render_data.objects;
       for (let i=0; i<objects.length; i++) {
-          const obj = makeRenderObject(objects[i]);
+          const obj = makeRenderObject(objects[i], uniforms);
           this.render_objects.push( obj );
           this.pivot.add( obj );
           const name = objects[i].name;

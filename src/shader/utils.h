@@ -327,3 +327,32 @@ vec4 calcLight(vec4 color, vec3 position, vec3 norm, bool inside)
   if(diffuse==0.0) spec = 0.0;
   return vec4(dimm*(color.xyz*(light_ambient+diffuse) + spec*light_spec*vec3(1,1,1)), color.w);
 }
+
+vec4 quaternion(vec3 vTo){
+    vec3 vFrom = vec3(0.0, 1.0, 0.0);
+    float EPS = 0.000001;
+    // assume that vectors are not normalized
+    float n = length(vTo);
+    float r = n + dot(vFrom, vTo);
+    vec3 tmp;
+
+	if ( r < EPS ) {
+		r = 0.0;
+		    if ( abs(vFrom.x) > abs(vFrom.z) ) {
+                tmp = vec3(-vFrom.y, vFrom.x, 0.0);
+			} else {
+                tmp = vec3(0, -vFrom.z, vFrom.y);
+			}
+    } else {
+        tmp = cross(vFrom, vTo);
+    }
+	return normalize(vec4(tmp.x, tmp.y, tmp.z, r));
+}
+
+// apply a rotation-quaternion to the given vector
+// (source: https://goo.gl/Cq3FU0)
+vec3 rotate(const vec3 v, const vec4 q) {
+vec3 t = 2.0 * cross(q.xyz, v);
+return v + q.w * t + cross(q.xyz, t);
+}
+

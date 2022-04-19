@@ -105,6 +105,56 @@ export class ThickEdgesObject extends THREE.Mesh {
     }
 }
 
+export class FieldLinesObject extends THREE.Mesh {
+    data : Object;
+    buffer_geometry: THREE.BufferGeometry;
+    name_ : string;
+
+    constructor(data, global_uniforms) {
+        const geo = new THREE.InstancedBufferGeometry();
+        let cyl = new THREE.CylinderGeometry( 1, 1, 1, 8, 1, true );
+        cyl.translate(0, 0.5, 0);
+        geo.setIndex( cyl.getIndex() );
+        geo.setAttribute( 'position', cyl.getAttribute('position') );
+        geo.setAttribute( 'normal', cyl.getAttribute('normal') );
+        geo.setAttribute( 'uv', cyl.getAttribute('uv') );
+
+        var uniforms = {
+            ...global_uniforms,
+            thickness: new THREE.Uniform(data.thickness),
+        };
+        const defines = {};
+        var material = new THREE.RawShaderMaterial({
+            vertexShader: getShader( 'fieldlines.vert', defines ),
+            fragmentShader: getShader( 'function.frag', defines , data.user_eval_function),
+            side: THREE.DoubleSide,
+            uniforms: uniforms,
+        });
+
+        super(geo, material);
+        this.name_ = data.name;
+        this.buffer_geometry = geo;
+        super.frustumCulled = false;
+    }
+
+    update(gui_status) {
+        super.visible = gui_status.Objects[this.name_];
+    }
+
+    updateRenderData(data, data2, t) {
+        this.data = data;
+        const setAttribute = ( name, num_components ) => {
+            const vals = new Float32Array(data[name]);
+            const attr = new THREE.InstancedBufferAttribute(vals, num_components);
+            this.buffer_geometry.setAttribute(name, attr);
+        }
+        setAttribute('pstart', 3);
+        setAttribute('pend', 3);
+        setAttribute('value', 1);
+        this.buffer_geometry.instanceCount = data.value.length;
+    }
+}
+
 export class LinesObject extends THREE.LineSegments {
     data : Object;
     buffer_geometry: THREE.BufferGeometry;
