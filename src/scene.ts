@@ -134,8 +134,9 @@ export class Scene extends WebGLScene {
   }
 
   getGuiSettings() {
-      const settings = JSON.parse(JSON.stringify(this.gui_status)); // deep-copy settings
-      this.controls.storeSettings( settings );
+      let settings = JSON.parse(JSON.stringify(this.gui_status)); // deep-copy settings
+      settings.camera = {};
+      this.controls.storeSettings( settings.camera );
       return JSON.parse(JSON.stringify(settings));
   }
 
@@ -689,6 +690,9 @@ export class Scene extends WebGLScene {
 
     this.updateRenderData(render_data);
     setTimeout(()=> this.onResize(), 0);
+    if(render_data.settings)
+        this.setGuiSettings(render_data.settings);
+
     console.log("Scene init done", this);
     if(render_data.on_init) {
       var on_init = Function("scene", "render_data", render_data.on_init);
