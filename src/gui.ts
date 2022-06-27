@@ -52,13 +52,15 @@ export class GUI extends dat.GUI {
             Light: { ambient: 0.3, diffuse: 0.7, shininess: 10, specularity: 0.3},
             Vectors: { show: false, grid_size: 10, offset: 0.0 },
             Misc: { stats: "-1", reduce_subdivision: false, "version": true, "axes": true, "colormap": true },
+            axes_labels: ["X", "Y", "Z"],
+            ...data.gui_settings,
         };
         this.gui_status_default = gui_status_default;
         if(Math.max(data.order2d, data.order3d)<=1)
             gui_status_default.subdivision=1;
 
-        this.gui_status = JSON.parse(JSON.stringify(gui_status_default)); // deep-copy settings
-        let gui_status = this.gui_status;
+        let gui_status = JSON.parse(JSON.stringify(gui_status_default)); // deep-copy settings
+        this.gui_status = gui_status;
         this.gui_functions = { };
 
         if(data.draw_vol || data.draw_surf) {

@@ -300,11 +300,6 @@ export class Scene extends WebGLScene {
     //   this.scene.background = new THREE.Color(0x292c2e);
     this.axes_object = new THREE.AxesHelper(0.15);
     this.axes_object.matrixAutoUpdate = false;
-    this.labels = [];
-    const s = 0.20;
-    this.labels.push( Label3D( this.container, new THREE.Vector3(s,0,0), "X" ) );
-    this.labels.push( Label3D( this.container, new THREE.Vector3(0,s,0), "Y" ) );
-    this.labels.push( Label3D( this.container, new THREE.Vector3(0,0,s), "Z" ) );
 
     this.tooltip = document.createElement("div");
     var el_text = document.createTextNode("tooltip");
@@ -365,6 +360,12 @@ export class Scene extends WebGLScene {
 
     console.log("GUI", gui);
     console.log("gui_status", gui_status);
+
+    this.labels = [];
+    const s = 0.20;
+    this.labels.push( Label3D( this.container, new THREE.Vector3(s,0,0), gui_status.axes_labels[0] ) );
+    this.labels.push( Label3D( this.container, new THREE.Vector3(0,s,0), gui_status.axes_labels[1] ) );
+    this.labels.push( Label3D( this.container, new THREE.Vector3(0,0,s), gui_status.axes_labels[2] ) );
 
     // var planeGeom = new THREE.PlaneBufferGeometry(10, 5, 10, 5);
     // console.log("planegeom", planeGeom);
