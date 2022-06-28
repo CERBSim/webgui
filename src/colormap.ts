@@ -97,6 +97,7 @@ export class ColormapObject extends THREE.Mesh {
     mesh_material: any;
     mesh_only: boolean;
     labels: any;
+    labels_object: any;
     divs: any;
     container: any;
     min_ : number;
@@ -134,6 +135,7 @@ export class ColormapObject extends THREE.Mesh {
           labels_object.appendChild(label);
         }
         container.appendChild(labels_object);
+        this.labels_object = labels_object;
         this.updateLabels(gui_status);
         this.mesh_material = material;
         this.mesh_only = mesh_only;
@@ -156,6 +158,7 @@ export class ColormapObject extends THREE.Mesh {
             if(!this.mesh_only)
                 this.updateLabels(gui_status);
         }
+        this.labels_object.style.visibility = gui_status.Misc.colormap ? "visible" : "hidden";
     }
 
     onResize(w,h) {

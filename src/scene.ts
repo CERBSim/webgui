@@ -998,6 +998,8 @@ export class Scene extends WebGLScene {
     uniforms.line_thickness.value = gui_status.line_thickness/h;
 
     this.axes_object.visible = gui_status.Misc.axes;
+    for (let i=0; i<this.labels.length; i++)
+        this.labels[i].el.style.visibility = gui_status.Misc.axes ? "visible" : "hidden";
     var subdivision = gui_status.subdivision;
     if(gui_status.Misc.reduce_subdivision && this.controls.mode != null)
       subdivision = Math.ceil(subdivision/2);
