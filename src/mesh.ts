@@ -221,7 +221,7 @@ export class MeshFunctionObject extends THREE.Mesh {
         mesh_material.polygonOffsetUnits = 1;
 
         super(geo, mesh_material);
-        super.name = data.name;
+        (this as any).name = data.name;
         this.data = data;
         this.mesh_only = mesh_only;
         this.uniforms = uniforms;
@@ -229,7 +229,7 @@ export class MeshFunctionObject extends THREE.Mesh {
     }
 
     update(gui_status) {
-        super.visible = gui_status.elements;
+        (this as any).visible = gui_status.elements;
         if(gui_status.subdivision !== undefined) {
             const sd = gui_status.subdivision;
             this.uniforms.n_segments.value = sd;
@@ -316,7 +316,7 @@ export class WireframeObject extends THREE.Line {
     }
 
     update(gui_status) {
-        super.visible = gui_status.mesh;
+        (this as any).visible = gui_status.mesh;
         if(gui_status.subdivision !== undefined) {
             const sd = gui_status.subdivision;
             this.uniforms.n_segments.value = sd;
@@ -437,14 +437,14 @@ export class ClippingFunctionObject extends THREE.Mesh {
         geo.setAttribute( 'vertid',   new THREE.Float32BufferAttribute( vertid, 4 ));
 
         super(geo, material);
-        super.name = data.name;
+        (this as any).name = data.name;
         this.data = data;
         this.uniforms = uniforms;
         this.buffer_geometry = geo;
     }
 
     update(gui_status) {
-        super.visible = gui_status.Clipping.function && gui_status.Clipping.enable;
+        (this as any).visible = gui_status.Clipping.function && gui_status.Clipping.enable;
         if(gui_status.subdivision !== undefined) {
             const sd = gui_status.subdivision;
             this.uniforms.n_segments.value = sd;

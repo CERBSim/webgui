@@ -66,7 +66,7 @@ export class ThickEdgesObject extends THREE.Mesh {
     }
 
     update(gui_status) {
-        super.visible = gui_status.edges;
+        (this as any).visible = gui_status.edges;
         if(gui_status.subdivision !== undefined) {
             const sd = gui_status.subdivision;
             this.uniforms.n_segments.value = sd;
@@ -134,11 +134,11 @@ export class FieldLinesObject extends THREE.Mesh {
         super(geo, material);
         this.name_ = data.name;
         this.buffer_geometry = geo;
-        super.frustumCulled = false;
+        (this as any).frustumCulled = false;
     }
 
     update(gui_status) {
-        super.visible = gui_status.Objects[this.name_];
+        (this as any).visible = gui_status.Objects[this.name_];
     }
 
     updateRenderData(data, data2, t) {
@@ -174,7 +174,7 @@ export class LinesObject extends THREE.LineSegments {
     }
 
     update(gui_status) {
-        super.visible = gui_status.Objects[this.name_];
+        (this as any).visible = gui_status.Objects[this.name_];
     }
 
     updateRenderData(data, data2, t) {
@@ -221,7 +221,7 @@ export class PointsObject extends THREE.Points {
     }
 
     update(gui_status) {
-        super.visible = gui_status.Objects[this.name_];
+        (this as any).visible = gui_status.Objects[this.name_];
     }
 
     updateRenderData(data, data2, t) {
