@@ -12,6 +12,7 @@ uniform bool do_clipping;
 uniform sampler2D tex_colormap;
 uniform float colormap_min;
 uniform float colormap_max;
+uniform vec2 colormap_size;
 
 uniform vec3 light_dir;
 uniform vec4 light_mat; // x=ambient, y=diffuse, z=shininess, w=specularity
@@ -281,9 +282,16 @@ bool isBehindClippingPlane(vec3 pos)
 
 vec4 getColor(float value)
 {
-  float x = (value-colormap_min)/(colormap_max-colormap_min);
-  vec3 color = texture2D(tex_colormap, vec2(x, 0.5)).xyz;
-  return vec4(color, 1.0);
+  float x = 0.0;
+  float y = 0.5;
+  if(colormap_size.y > 1.0)
+  {
+      x = mod(value, colormap_size.x)/colormap_size.x;
+      y = (value - x*colormap_size.x)/colormap_size.y;
+  }
+  else
+      x = (value-colormap_min)/(colormap_max-colormap_min);
+  return texture2D(tex_colormap, vec2(x, y));
 }
 
 vec4 calcLight(vec4 color, vec3 position, vec3 norm, bool inside)

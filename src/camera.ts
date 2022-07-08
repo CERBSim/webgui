@@ -25,6 +25,8 @@ export class CameraControls extends THREE.EventDispatcher {
     cameraObject: any;
     pivotObject: any;
 
+    onSelect: any = null;
+
     mat = new THREE.Matrix4();
     mode = null;
     rotation_step_degree = 0.05;
@@ -217,7 +219,9 @@ export class CameraControls extends THREE.EventDispatcher {
         if(!this.did_move) {
             event.preventDefault();
             var rect = this.domElement.getBoundingClientRect();
-            await this.scene.getMeshIndex(event.clientX-rect.left, event.clientY-rect.top);
+            const index = await this.scene.getMeshIndex(event.clientX-rect.left, event.clientY-rect.top);
+            if(this.onSelect)
+                this.onSelect(index, event);
         }
         super.dispatchEvent( changeEvent );
     }
@@ -297,9 +301,11 @@ export class CameraControls extends THREE.EventDispatcher {
     }
 
     async scale(s, x, y) {
+        console.log("scale", s, x, y);
         var rect = this.domElement.getBoundingClientRect();
         let p = await this.scene.getPixelCoordinates(x-rect.left, y-rect.top);
         p = p || this.center;
+        console.log("center", p, this.center);
 
         let m = new THREE.Matrix4().makeScale(s,s,s);
         wrapTransformation(m, p);

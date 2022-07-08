@@ -262,6 +262,7 @@ export class Scene extends WebGLScene {
     uniforms.colormap_min = new THREE.Uniform( 0.0 );
     uniforms.colormap_max = new THREE.Uniform( 1.0 );
     uniforms.function_mode = new THREE.Uniform( 0 );
+    uniforms.colormap_size = new THREE.Uniform( new THREE.Vector2(1,1) );
 
     this.colormap_object = null;
     this.edges_object = null;
@@ -893,6 +894,7 @@ export class Scene extends WebGLScene {
   async getMeshIndex(x,y) {
     await this.animate(true);
     let index = -1;
+    let dim = -1;
     if(this.mesh_only) {
         const pixels = new Float32Array(4);
         const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
@@ -913,8 +915,8 @@ export class Scene extends WebGLScene {
         this.uniforms.line_thickness.value = this.gui_status.line_thickness/h;
         const gl = this.context;
         this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
-        const index = Math.round(pixels[1]);
-        const dim = Math.round(pixels[0]);
+        index = Math.round(pixels[1]);
+        dim = Math.round(pixels[0]);
         if(index>=0 && dim>0) {
             this.uniforms.highlight_selected_face.value = dim;
             this.uniforms.selected_face.value = index;
@@ -951,7 +953,7 @@ export class Scene extends WebGLScene {
         this.camera.clearViewOffset();
         this.uniforms.function_mode.value = function_mode;
     }
-    return index;
+    return {dim, index};
   }
 
   async getPixelCoordinates (x,y) {
@@ -966,9 +968,11 @@ export class Scene extends WebGLScene {
       this.renderer.render( this.scene, this.camera );
       this.uniforms.render_depth.value= false;
 
+      console.log("viewport", x * window.devicePixelRatio | 0,y * window.devicePixelRatio | 0 )
       let pixel_buffer = new Float32Array( 4 );
       this.context.readPixels(0, 0, 1, 1, this.context.RGBA, this.context.FLOAT, pixel_buffer);
       this.camera.clearViewOffset();
+      console.log("pixel buffer", pixel_buffer);
 
       if (pixel_buffer[3]!==1){
         let p = new THREE.Vector3();

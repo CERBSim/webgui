@@ -2,21 +2,23 @@ import * as THREE from 'three';
 
 const css = require('./styles.css');
 
-function makeSelectedFaceTexture(data, bnds = [], col_selected = [0,0.5,1.0], col_default = [0,1,0] ) {
+function makeSelectedFaceTexture(data, bnds = [], col_selected = [0,0.5,1.0,1.0], col_default = [0,1,0,1] ) {
     var n_colors = data.mesh_regions_2d;
-    var colormap_data = new Float32Array(3*n_colors);
+    var colormap_data = new Float32Array(4*n_colors);
 
     for (var i=0; i<n_colors; i++)
     {
-      colormap_data[3*i+0] = col_default[0];
-      colormap_data[3*i+1] = col_default[1];
-      colormap_data[3*i+2] = col_default[0];
+      colormap_data[4*i+0] = col_default[0];
+      colormap_data[4*i+1] = col_default[1];
+      colormap_data[4*i+2] = col_default[2];
+      colormap_data[4*i+3] = col_default[3];
     }
     for (var i=0; i<bnds.length; i++)
     {
-      colormap_data[3*bnds[i]+0] = col_selected[0];
-      colormap_data[3*bnds[i]+1] = col_selected[1];
-      colormap_data[3*bnds[i]+2] = col_selected[2];
+      colormap_data[4*bnds[i]+0] = col_selected[0];
+      colormap_data[4*bnds[i]+1] = col_selected[1];
+      colormap_data[4*bnds[i]+2] = col_selected[2];
+      colormap_data[4*bnds[i]+3] = col_selected[3];
     }
 
     var colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
@@ -25,13 +27,17 @@ function makeSelectedFaceTexture(data, bnds = [], col_selected = [0,0.5,1.0], co
     return colormap_texture;
 }
 
-function makeMeshColormapTexture(data, n_colors) {
+function makeMeshColormapTexture(data, n_colors_) {
     // Drawing only a mesh -> colors are given explicitly in render data (or just use green)
     var n_colors = data.mesh_regions_2d;
-    var colormap_data = new Float32Array(3*n_colors);
+    const width = Math.min(n_colors, 1024)
+    const height = Math.floor((n_colors+(width-1))/width)
+    n_colors = width*height;
+    console.log("texture size", n_colors, width, height)
+    var colormap_data = new Float32Array(4*n_colors);
 
-    for (var i=0; i<3*n_colors; i++) {
-        if(i%3==1)
+    for (var i=0; i<4*n_colors; i++) {
+        if(i%4==1 || i%4==3)
             colormap_data[i] = 1.0;
         else
             colormap_data[i] = 0.0;
@@ -40,10 +46,13 @@ function makeMeshColormapTexture(data, n_colors) {
     const colors = data.colors;
     if(colors) {
       for (var i=0; i<colors.length; i++)
+      {
           for (var k=0; k<3; k++)
-              colormap_data[3*i+k] = colors[i][k];
+              colormap_data[4*i+k] = colors[i][k];
+          colormap_data[4*i+3] = colors[i].length >3 ? colors[i][3] : 1.0;
+      }
     }
-    var colormap_texture = new THREE.DataTexture( colormap_data, n_colors, 1, THREE.RGBFormat, THREE.FloatType );
+    var colormap_texture = new THREE.DataTexture( colormap_data, width, height, THREE.RGBAFormat, THREE.FloatType );
     colormap_texture.magFilter = THREE.NearestFilter;
     colormap_texture.needsUpdate = true;
     return colormap_texture;
@@ -196,6 +205,10 @@ export class ColormapObject extends THREE.Mesh {
     setTexture(tex) {
         if(this.uniforms.tex_colormap === undefined)
             this.uniforms.tex_colormap = {value: null};
+
+        console.log("set texture", tex.image);
+        this.uniforms.colormap_size.value.x = tex.image.width;
+        this.uniforms.colormap_size.value.y = tex.image.height;
 
         this.uniforms.tex_colormap.value = tex;
         if(!this.mesh_only)

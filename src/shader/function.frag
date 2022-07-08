@@ -56,6 +56,8 @@ void main()
   vec4 color = vec4(.7,.7,.7,1);
 #else
   vec4 color = getColor(GetValue(value));
+  if(color.w == 0.0)
+    discard;
 #endif
 
   gl_FragColor = calcLight( color, p_, norm, inside);

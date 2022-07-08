@@ -37,7 +37,8 @@ export class WebGLScene {
       this.context = canvas.getContext( 'webgl', { alpha: false, ...webgl_args } );
     }
 
-    this.renderer = new THREE.WebGLRenderer( { canvas: canvas, context: this.context } );
+    this.renderer = new THREE.WebGLRenderer( { canvas: canvas, context: this.context, alpha: true, premultipliedAlpha: false } );
+    this.renderer.setClearAlpha(1.0);
     this.renderer.autoClear = false;
     console.log("Renderer", this.renderer);
 
