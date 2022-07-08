@@ -208,7 +208,7 @@ export class CameraControls extends THREE.EventDispatcher {
         }
         if(event.button==2) {
             event.preventDefault();
-            this.mode = "move";
+            this.mode = event.ctrlKey ? "move_clipping_plane" : "move";
         }
         event.stopPropagation();
     }
@@ -240,6 +240,10 @@ export class CameraControls extends THREE.EventDispatcher {
             needs_update = true;
             this.panObject(new THREE.Vector3(1, 0, 0), 0.004*event.movementX);
             this.panObject(new THREE.Vector3(0, -1, 0), 0.004*event.movementY);
+        }
+        if(this.mode=="move_clipping_plane") {
+            this.scene.gui_status.Clipping.dist += 0.0001*event.movementY * this.scene.mesh_radius;
+            this.scene.animate();
         }
         if(needs_update) {
             event.preventDefault();
