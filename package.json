@@ -10,7 +10,7 @@
     "clean": "rm dist/webgui.js",
     "build-shaders": "node build_shaders.js",
     "build-dev": "npm run build-shaders && webpack --mode development",
-    "build-prod": "npm run build-shaders && webpack --mode production"
+    "build": "npm run build-shaders && webpack --mode production"
   },
   "dependencies": {
     "@types/dat.gui": "^0.7.6",

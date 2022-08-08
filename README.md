@@ -13,7 +13,7 @@ yarn
 To create a production build:
 
 ```sh
-yarn build-prod
+yarn build
 ```
 
 To create a development build:
