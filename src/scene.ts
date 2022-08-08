@@ -915,10 +915,11 @@ export class Scene extends WebGLScene {
         this.uniforms.line_thickness.value = this.gui_status.line_thickness/h;
         const gl = this.context;
         this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
+        console.log("pixels", pixels);
         index = Math.round(pixels[1]);
         dim = Math.round(pixels[0]);
         if(index>=0 && dim>0) {
-            this.uniforms.highlight_selected_face.value = dim;
+            // this.uniforms.highlight_selected_face.value = dim;
             this.uniforms.selected_face.value = index;
             let name = "";
             let text = "";

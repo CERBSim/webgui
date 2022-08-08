@@ -24,6 +24,14 @@ void main()
   if( isBehindClippingPlane(p_) )
     discard;
 
+#ifdef NO_FUNCTION_VALUES
+  vec4 color = vec4(.7,.7,.7,1);
+#else
+  vec4 color = getColor(GetValue(value));
+  if(color.w == 0.0)
+    discard;
+#endif
+
   if(function_mode == 4.0)
   {
     gl_FragColor = vec4(value, 1.0);
@@ -32,6 +40,8 @@ void main()
 
   if(function_mode == 7.0)
   {
+   if(getColor(value_.x).w == 0.0)
+      discard;
     gl_FragColor = vec4(2, value_.x, value_.y, 1.0);
     return;
   }
@@ -51,14 +61,6 @@ void main()
     inside = true;
   }
 #endif // SKIP_FACE_CHECK
-
-#ifdef NO_FUNCTION_VALUES
-  vec4 color = vec4(.7,.7,.7,1);
-#else
-  vec4 color = getColor(GetValue(value));
-  if(color.w == 0.0)
-    discard;
-#endif
 
   gl_FragColor = calcLight( color, p_, norm, inside);
 
