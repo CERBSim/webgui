@@ -3,6 +3,7 @@ import {
   getShader,
   readB64,
   setKeys,
+  log,
 } from './utils';
 
 import {
@@ -133,6 +134,15 @@ export class Scene extends WebGLScene {
       handlers[i].apply(null, args);
   }
 
+  cleanup() {
+    if(this.labels && this.labels.length)
+        this.labels.map( (label) => label.el.remove() );
+
+    this.labels = [];
+    if(this.tooltip)
+        this.tooltip.remove();
+  }
+
   getGuiSettings() {
       let settings = JSON.parse(JSON.stringify(this.gui_status)); // deep-copy settings
       settings.camera = {};
@@ -252,6 +262,8 @@ export class Scene extends WebGLScene {
 
   initRenderData (render_data)
   {
+    const llog = log.local("initRenderData");
+    this.cleanup();
     unpackIndexedData(render_data);
 
     if(this.gui!=null)
@@ -359,8 +371,11 @@ export class Scene extends WebGLScene {
     let gui_status = this.gui_status;
     this.gui_status_default = gui.gui_status_default;
 
-    console.log("GUI", gui);
-    console.log("gui_status", gui_status);
+    llog.info("GUI", gui);
+    llog.info("gui_status", gui_status);
+
+    if(this.labels && this.labels.length)
+        this.labels.map( (label) => label.el.remove() );
 
     this.labels = [];
     const s = 0.20;
@@ -702,6 +717,7 @@ export class Scene extends WebGLScene {
     }
     this.controls.update();
     this.animate();
+    llog.release();
   }
 
   init(element, render_data, webgl_args = {})
