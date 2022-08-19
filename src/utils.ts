@@ -4,6 +4,67 @@ import {
   shaders
 } from './shaders';
 
+export const LOG_NONE=0;
+export const LOG_FATAL=1;
+export const LOG_ERROR=2;
+export const LOG_WARN=3;
+export const LOG_INFO=4;
+export const LOG_DEBUG=5;
+export const LOG_TRACE=6;
+
+const _level_style = [
+    null,
+    ["%cFATAL", "color:red"],
+    ["%cerror", "color:red"],
+    ["%cwarning", "color:yellow"],
+    ["%cinfo", "color:black"],
+    ["%cdebug", "color:grey"],
+    ["%ctrace", "color:grey"]
+]
+
+export class Log {
+    name: String;
+    level: Number;
+    style: String;
+
+  constructor(name="", level=LOG_INFO, style="color: blue") {
+      this.name = name;
+      this.level = level;
+      this.style = style;
+  }
+
+  log(level, ...args) {
+      if(level>this.level)
+          return;
+
+      console.log(..._level_style[level], this.name, ...args);
+  }
+
+  trace(...args) { this.log(LOG_TRACE, ...args); }
+  debug(...args) { this.log(LOG_DEBUG, ...args); }
+  info(...args) { this.log(LOG_INFO, ...args); }
+  warn(...args) { this.log(LOG_WARN, ...args); }
+  error(...args) { this.log(LOG_ERROR, ...args); }
+  fatal(...args) { this.log(LOG_FATAL, ...args); }
+
+  local(name, collapsed=true) {
+      let log = new Log(name);
+      const msg = "%c " + this.name + ' - ' + name
+      if(collapsed)
+          console.groupCollapsed(msg, this.style);
+      else
+          console.group(msg, this.style);
+      log.release = () => { console.groupEnd(); }
+      return log;
+  }
+
+  release() {
+      console.groupEnd();
+  }
+}
+
+export const log = new Log("Webgui");
+
 export const MAX_SUBDIVISION = 20;
 
 export class WebGLScene {
