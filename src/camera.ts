@@ -93,10 +93,21 @@ export class CameraControls extends THREE.EventDispatcher {
 
         let vector = new THREE.Vector3();
         const rect = this.scene.canvas.getBoundingClientRect();
-        for(let {el, p} of this.scene.labels) {
-            if(this.scene.ortho_camera) {
+        for(let i=0; i< this.scene.labels.length; i++) {
+            let {el, p} = this.scene.labels[i];
+            if(this.scene.ortho_camera && i<3) {
                 vector.copy(p).applyMatrix4(this.scene.axes_object.matrixWorld);
                 vector.project( this.scene.ortho_camera );
+                // map to 2D screen space
+                const x = Math.round( (   vector.x + 1 ) * rect.width  / 2 );
+                const y = Math.round( ( - vector.y + 1 ) * rect.height / 2 );
+                el.style.display = "block";
+                el.style.top  = `${y}px`;
+                el.style.left = `${x}px`;
+            }
+            if(i>=3) {
+                vector.copy(p).applyMatrix4(this.mat);
+                vector.project( this.cameraObject );
                 // map to 2D screen space
                 const x = Math.round( (   vector.x + 1 ) * rect.width  / 2 );
                 const y = Math.round( ( - vector.y + 1 ) * rect.height / 2 );

@@ -521,13 +521,22 @@ export class Scene extends WebGLScene {
       let gui_objects = gui.addFolder("Objects");
       const objects = render_data.objects;
       for (let i=0; i<objects.length; i++) {
-          const obj = makeRenderObject(objects[i], uniforms);
-          this.render_objects.push( obj );
-          this.pivot.add( obj );
-          const name = objects[i].name;
-          if(!(name in gui_status.Objects)) {
-              gui_status.Objects[name] = true;
-              gui_objects.add(gui_status.Objects, name).onChange(animate);
+          console.log("object", objects[i].type);
+          if(objects[i].type === 'text'){
+              const p = objects[i].position;
+              this.render_objects.push( null );
+              console.log("label3d", p, p[0], p[1], p[2], objects[i].text);
+              this.labels.push( Label3D( this.container, new THREE.Vector3(p[0],p[1],p[2]), objects[i].text ) );
+          }
+          else {
+              const obj = makeRenderObject(objects[i], uniforms);
+              this.render_objects.push( obj );
+              this.pivot.add( obj );
+              const name = objects[i].name;
+              if(!(name in gui_status.Objects)) {
+                  gui_status.Objects[name] = true;
+                  gui_objects.add(gui_status.Objects, name).onChange(animate);
+              }
           }
       }
     }
@@ -771,7 +780,8 @@ export class Scene extends WebGLScene {
         this.mesh_object.updateRenderData(render_data);
 
     for (let i=0; i<this.render_objects.length; i++)
-        this.render_objects[i].updateRenderData( render_data.objects[i] );
+        if(this.render_objects[i] != null)
+          this.render_objects[i].updateRenderData( render_data.objects[i] );
 
     if(this.clipping_function_object != null)
         this.clipping_function_object.updateRenderData(render_data);
@@ -833,6 +843,7 @@ export class Scene extends WebGLScene {
 
     if(rd2.objects)
         for (let i=0; i<this.render_objects.length; i++)
+          if(this.render_objects[i] != null)
             this.render_objects[i].updateRenderData( rd.objects[i], rd2.objects[i], t );
 
     if(this.clipping_function_object != null)
@@ -1019,7 +1030,7 @@ export class Scene extends WebGLScene {
     uniforms.line_thickness.value = gui_status.line_thickness/h;
 
     this.axes_object.visible = gui_status.Misc.axes;
-    for (let i=0; i<this.labels.length; i++)
+    for (let i=0; i<3; i++)
         this.labels[i].el.style.visibility = gui_status.Misc.axes ? "visible" : "hidden";
     var subdivision = gui_status.subdivision;
     if(gui_status.Misc.reduce_subdivision && this.controls.mode != null)
@@ -1035,6 +1046,7 @@ export class Scene extends WebGLScene {
       this.mesh_object.update(gui_status);
 
     for (let i=0; i<this.render_objects.length; i++)
+    if(this.render_objects[i] != null)
         this.render_objects[i].update(gui_status);
 
     if( this.colormap_object != null )
