@@ -716,6 +716,8 @@ export class Scene extends WebGLScene {
 
     this.updateRenderData(render_data);
     setTimeout(()=> this.onResize(), 0);
+    if(render_data.gui_settings)
+        this.setGuiSettings(render_data.gui_settings);
     if(render_data.settings)
         this.setGuiSettings(render_data.settings);
 
