@@ -167,7 +167,7 @@ export function setKeys (dst, src) {
   for(var key in dst) {
     if(typeof(dst[key])=="object" && src[key] !== undefined)
       setKeys(dst[key], src[key]);
-    else
+    else if (src[key] !== undefined)
       {
         dst[key] = src[key];
       }

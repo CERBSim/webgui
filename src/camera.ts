@@ -154,10 +154,33 @@ export class CameraControls extends THREE.EventDispatcher {
     }
 
     loadSettings(settings) {
-        this.mat.copy( settings.mat );
-        this.center.copy(settings.center);
-        this.update();
-        this.scene.setCenterTag();
+        if(settings.mat) {
+            this.mat.copy( settings.mat );
+            this.center.copy(settings.center);
+            this.update();
+            this.scene.setCenterTag();
+        }
+        if(settings.transformations) {
+            for( let trans of settings.transformations ) {
+                switch( trans.type ) {
+                    case "move":
+                        let v = trans.dir;
+                        let dist = trans.dist || 1.0;
+                        this.panObject( new THREE.Vecto3(v[0], v[1], v[2]), dist );
+                        break;
+                    case "rotateX":
+                        console.log("rotate", trans);
+                        this.rotateObject(new THREE.Vector3(1, 0, 0), trans.angle)
+                        break;
+                    case "rotateY":
+                        this.rotateObject(new THREE.Vector3(0, 1, 0), trans.angle)
+                        break;
+                    case "rotateZ":
+                        this.rotateObject(new THREE.Vector3(0, 0, 1), trans.angle)
+                        break;
+                }
+            }
+        }
     }
 
     storeSettings( settings ) {
