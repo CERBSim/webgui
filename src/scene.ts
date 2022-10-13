@@ -724,7 +724,7 @@ export class Scene extends WebGLScene {
       var on_init = Function("scene", "render_data", render_data.on_init);
       on_init(this, render_data);
     }
-    this.controls.update();
+    this.controls.scale(1,0,0);
     this.animate();
     llog.release();
   }
