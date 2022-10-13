@@ -177,8 +177,8 @@ export class Scene extends WebGLScene {
         this.colormap_object.onResize(w,h);
       this.camera.aspect = aspect;
       this.uniforms.aspect.value = aspect;
-      this.camera.updateProjectionMatrix();
       this.renderer.setSize( w, h );
+      this.camera.updateProjectionMatrix();
       this.controls.update();
       this.animate();
 
@@ -726,7 +726,7 @@ export class Scene extends WebGLScene {
       var on_init = Function("scene", "render_data", render_data.on_init);
       on_init(this, render_data);
     }
-    this.controls.scale(1,0,0);
+    this.on("afterrender", ()=>this.controls.update());
     this.animate();
     llog.release();
   }
