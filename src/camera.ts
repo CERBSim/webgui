@@ -166,7 +166,7 @@ export class CameraControls extends THREE.EventDispatcher {
                     case "move":
                         let v = trans.dir;
                         let dist = trans.dist || 1.0;
-                        this.panObject( new THREE.Vecto3(v[0], v[1], v[2]), dist );
+                        this.panObject( new THREE.Vector3(v[0], v[1], v[2]), dist );
                         break;
                     case "rotateX":
                         console.log("rotate", trans);
