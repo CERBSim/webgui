@@ -170,13 +170,13 @@ export class CameraControls extends THREE.EventDispatcher {
                         break;
                     case "rotateX":
                         console.log("rotate", trans);
-                        this.rotateObject(new THREE.Vector3(1, 0, 0), trans.angle)
+                        this.rotateObject(new THREE.Vector3(1, 0, 0), Math.PI*trans.angle/180)
                         break;
                     case "rotateY":
-                        this.rotateObject(new THREE.Vector3(0, 1, 0), trans.angle)
+                        this.rotateObject(new THREE.Vector3(0, 1, 0), Math.PI*trans.angle/180)
                         break;
                     case "rotateZ":
-                        this.rotateObject(new THREE.Vector3(0, 0, 1), trans.angle)
+                        this.rotateObject(new THREE.Vector3(0, 0, 1), Math.PI*trans.angle/180)
                         break;
                 }
             }
