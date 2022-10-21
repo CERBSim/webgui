@@ -31,6 +31,16 @@ uniform float deformation;
 
 uniform vec2 trafo;
 
+bool isNan(float val)
+{
+  return (val <= 0.0 || 0.0 <= val) ? false : true;
+}
+
+bool isNan(vec3 v)
+{
+  return isNan(v.x+v.y+v.z);
+}
+
 float GetValue( vec3 value )
 {
   if(function_mode==0.0) return value.x;

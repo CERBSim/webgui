@@ -63,6 +63,11 @@ void main()
   mat3 pos_and_val = getPositionAndValue(t0);
   vec3 value = pos_and_val[1];
 
+  if(isNan(value)) {
+      gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+      return;
+  }
+
   vec4 p = vec4(pos_and_val[0],1);
 
 #ifdef DEFORMATION
