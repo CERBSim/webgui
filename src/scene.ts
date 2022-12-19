@@ -138,6 +138,9 @@ export class Scene extends WebGLScene {
     if(this.labels && this.labels.length)
         this.labels.map( (label) => label.el.remove() );
 
+    if(this.colormap_object)
+        this.colormap_object.cleanup();
+
     this.labels = [];
     if(this.tooltip)
         this.tooltip.remove();

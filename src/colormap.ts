@@ -155,6 +155,10 @@ export class ColormapObject extends THREE.Mesh {
         this.update(gui_status);
     }
 
+    cleanup() {
+        this.labels_object.innerHTML = '';
+    }
+
     update(gui_status) {
         if(this.min_ != gui_status.colormap_min ||
            this.max_ != gui_status.colormap_max ||
