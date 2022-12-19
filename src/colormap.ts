@@ -178,20 +178,23 @@ export class ColormapObject extends THREE.Mesh {
         if(this.mesh_only)
             return;
         const aspect = w/h;
-        const x0 = -aspect*0.93;
-        const y0 = 0.93;
-        // this._position.set(x0, 0.95, 0.0);
         let p = new THREE.Vector3();
         super.getWorldPosition(p);
         super.translateOnAxis(p, -1.0);
         super.translateY(0.95);
-        super.translateX(x0);
+        super.translateX(-0.93*aspect);
         super.updateWorldMatrix( false, false );
 
         const n = this.labels.length;
         const y = Math.round(0.5*(0.05+0.07)*h);
+        const dx = 0.5*w/((n-1)*aspect);
+        const x0 = 0.07*0.5*w;
         for(var i=0; i<n; i++) {
-            const x = Math.round(0.5*w*(1.0 + (x0+i/(n-1))/aspect));
+            if(i>0 && i<n-1) {
+                if(dx<50 && i%2 == 1) continue;
+                if(dx<30 && i%4 == 2) continue;
+            }
+            const x = Math.round(x0 + i*dx);
             this.divs[i].setAttribute("style",this.label_style+`transform: translate(-50%, 0%); left: ${x}px; top: ${y}px` );
         }
     }
