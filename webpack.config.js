@@ -11,7 +11,7 @@ function getConfig() {
             path: path.resolve(__dirname, 'dist'),
             filename: 'webgui.js',
             library: package.name,
-            libraryTarget: 'amd',
+            libraryTarget: 'umd',
             globalObject: 'this',
         },
         module: {
