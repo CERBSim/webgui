@@ -524,11 +524,11 @@ export class Scene extends WebGLScene {
       let gui_objects = gui.addFolder("Objects");
       const objects = render_data.objects;
       for (let i=0; i<objects.length; i++) {
-          console.log("object", objects[i].type);
+          // console.log("object", objects[i].type);
           if(objects[i].type === 'text'){
               const p = objects[i].position;
               this.render_objects.push( null );
-              console.log("label3d", p, p[0], p[1], p[2], objects[i].text);
+              // console.log("label3d", p, p[0], p[1], p[2], objects[i].text);
               this.labels.push( Label3D( this.container, new THREE.Vector3(p[0],p[1],p[2]), objects[i].text ) );
           }
           else {
@@ -947,7 +947,7 @@ export class Scene extends WebGLScene {
         this.uniforms.line_thickness.value = this.gui_status.line_thickness/h;
         const gl = this.context;
         this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
-        console.log("pixels", pixels);
+        // console.log("pixels", pixels);
         index = Math.round(pixels[1]);
         dim = Math.round(pixels[0]);
         if(index>=0 && dim>0) {
@@ -1001,11 +1001,11 @@ export class Scene extends WebGLScene {
       this.renderer.render( this.scene, this.camera );
       this.uniforms.render_depth.value= false;
 
-      console.log("viewport", x * window.devicePixelRatio | 0,y * window.devicePixelRatio | 0 )
+      // console.log("viewport", x * window.devicePixelRatio | 0,y * window.devicePixelRatio | 0 )
       let pixel_buffer = new Float32Array( 4 );
       this.context.readPixels(0, 0, 1, 1, this.context.RGBA, this.context.FLOAT, pixel_buffer);
       this.camera.clearViewOffset();
-      console.log("pixel buffer", pixel_buffer);
+      // console.log("pixel buffer", pixel_buffer);
 
       if (pixel_buffer[3]!==1){
         let p = new THREE.Vector3();

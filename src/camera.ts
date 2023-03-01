@@ -169,7 +169,6 @@ export class CameraControls extends THREE.EventDispatcher {
                         this.panObject( new THREE.Vector3(v[0], v[1], v[2]), dist );
                         break;
                     case "rotateX":
-                        console.log("rotate", trans);
                         this.rotateObject(new THREE.Vector3(1, 0, 0), Math.PI*trans.angle/180)
                         break;
                     case "rotateY":
@@ -339,11 +338,9 @@ export class CameraControls extends THREE.EventDispatcher {
     }
 
     async scale(s, x, y) {
-        console.log("scale", s, x, y);
         var rect = this.domElement.getBoundingClientRect();
         let p = await this.scene.getPixelCoordinates(x-rect.left, y-rect.top);
         p = p || this.center;
-        console.log("center", p, this.center);
 
         let m = new THREE.Matrix4().makeScale(s,s,s);
         wrapTransformation(m, p);
