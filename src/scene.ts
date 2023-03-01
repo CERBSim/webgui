@@ -170,9 +170,23 @@ export class Scene extends WebGLScene {
     this.animate();
   }
 
+  activateFullscreen() {
+    let elem = this.element.parentNode;
+
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if(elem.webkitRequestFullScreen) {
+      // Webkit (works in Safari and Chrome Canary)
+      elem.webkitRequestFullScreen();
+    }else if(elem.mozRequestFullScreen) {
+      // Firefox
+      elem.mozRequestFullScreen();
+    }
+  }
+
   onResize() {
     const w = this.element.parentNode.clientWidth;
-    const h = this.element.parentNode.clientHeight;
+    const h = this.element.parentNode.clientHeight - 6;
 
     const aspect = w/h;
     this.ortho_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, -100, 100 );
@@ -684,22 +698,13 @@ export class Scene extends WebGLScene {
 
     gui_misc.add(gui_status.Misc, "axes").onChange(animate);
     gui_misc.add(gui_status.Misc, "version").onChange(value => {
-      this.version_object.style.visibility = value ? "visible" : "hidden";
+      this.version_object.style.display = value ? "block" : "none";
     });
 
     gui_functions['fullscreen'] = () =>{
-      let elem = this.element.parentNode;
-
-      if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-      } else if(elem.webkitRequestFullScreen) {
-        // Webkit (works in Safari and Chrome Canary)
-        elem.webkitRequestFullScreen();
-      }else if(elem.mozRequestFullScreen) {
-        // Firefox
-        elem.mozRequestFullScreen();
-      }
+      this.activateFullscreen;
     };
+
     gui.add(gui_functions, "fullscreen");
 
     gui_functions['reset'] = ()=> {

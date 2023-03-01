@@ -171,7 +171,7 @@ export class ColormapObject extends THREE.Mesh {
             if(!this.mesh_only)
                 this.updateLabels(gui_status);
         }
-        this.labels_object.style.visibility = gui_status.Misc.colormap ? "visible" : "hidden";
+        this.labels_object.style.display = gui_status.Misc.colormap ? "block" : "none";
     }
 
     onResize(w,h) {
@@ -190,11 +190,11 @@ export class ColormapObject extends THREE.Mesh {
         const dx = 0.5*w/((n-1)*aspect);
         const x0 = 0.07*0.5*w;
         for(var i=0; i<n; i++) {
-            if(i>0 && i<n-1) {
-                if(dx<50 && i%2 == 1) continue;
-                if(dx<30 && i%4 == 2) continue;
-            }
-            const x = Math.round(x0 + i*dx);
+          const hide_label = (i>0 && i<n-1) && (dx<50 && i%2 == 1 || dx<30 && i%4 == 2);
+          const x = Math.round(x0 + i*dx);
+          if(hide_label)
+            this.divs[i].setAttribute("style","display: none");
+          else
             this.divs[i].setAttribute("style",this.label_style+`transform: translate(-50%, 0%); left: ${x}px; top: ${y}px` );
         }
     }
