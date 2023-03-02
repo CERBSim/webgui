@@ -170,7 +170,11 @@ export class Scene extends WebGLScene {
     this.animate();
   }
 
-  activateFullscreen() {
+  exitFullscreen() {
+    document.exitFullscreen();
+  }
+
+  requestFullscreen() {
     let elem = this.element.parentNode;
 
     if (elem.requestFullscreen) {
@@ -182,6 +186,17 @@ export class Scene extends WebGLScene {
       // Firefox
       elem.mozRequestFullScreen();
     }
+  }
+
+  isFullscreen() {
+    return document.fullscreenElement !== null;
+  }
+
+  toggleFullscreen() {
+    if(this.isFullscreen())
+      this.exitFullscreen()
+    else
+      this.requestFullscreen()
   }
 
   onResize() {
@@ -702,7 +717,7 @@ export class Scene extends WebGLScene {
     });
 
     gui_functions['fullscreen'] = () =>{
-      this.activateFullscreen;
+      this.toggleFullscreen;
     };
 
     gui.add(gui_functions, "fullscreen");
