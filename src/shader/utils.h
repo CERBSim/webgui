@@ -292,6 +292,7 @@ bool isBehindClippingPlane(vec3 pos)
 
 vec4 getColor(float value)
 {
+  if(isNan(value)) return vec4(0.7,0.7,0.7,1.0);
   float x = 0.0;
   float y = 0.5;
   if(colormap_size.y > 1.0)

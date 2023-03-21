@@ -15,10 +15,10 @@ void main()
   vec4 pv = GetPositionAndScalar(u,v);
   value_.x = pv.w;
   value_.yz = GetVectorValues(u,v);
-  if(isNan(value_)) {
-      gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
-      return;
-  }
+  /* if(isNan(value_)) { */
+  /*     gl_Position = vec4(0.0, 0.0, 0.0, 0.0); */
+  /*     return; */
+  /* } */
 
   normal_ = GetNormal(u,v);
 
