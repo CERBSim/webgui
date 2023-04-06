@@ -80,6 +80,7 @@ export class WebGLScene {
 
   initCanvas (element, webgl_args)
   {
+    const llog = log.local("initCanvas");
     this.requestId = 0;
     this.element = element;
     var canvas = document.createElement( 'canvas' );
@@ -88,7 +89,7 @@ export class WebGLScene {
     var gl2 = canvas.getContext('webgl2');
 
     if (gl2) {
-      console.log('webgl2 is supported!');
+      llog.info('webgl2 is supported!');
       this.context = canvas.getContext( 'webgl2', { alpha: false, ...webgl_args } );
       this.have_webgl2 = true;
     }
@@ -101,7 +102,7 @@ export class WebGLScene {
     this.renderer = new THREE.WebGLRenderer( { canvas: canvas, context: this.context, alpha: true, premultipliedAlpha: false } );
     this.renderer.setClearAlpha(1.0);
     this.renderer.autoClear = false;
-    console.log("Renderer", this.renderer);
+    llog.info("Renderer", this.renderer);
 
     this.render_target = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight );
     this.render_target.texture.format = THREE.RGBAFormat;
@@ -119,7 +120,7 @@ export class WebGLScene {
     element.appendChild( this.container );
 
     this.container.appendChild( this.renderer.domElement );
-
+    llog.release();
   }
 
   async animate (cancel_existing_request=false) {
