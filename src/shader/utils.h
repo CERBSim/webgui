@@ -14,6 +14,7 @@ uniform float colormap_min;
 uniform float colormap_max;
 uniform vec2 colormap_size;
 
+uniform bool dark_backside;
 uniform vec3 light_dir;
 uniform vec4 light_mat; // x=ambient, y=diffuse, z=shininess, w=specularity
 
@@ -319,7 +320,7 @@ vec4 calcLight(vec4 color, vec3 position, vec3 norm, bool inside)
 
   float sDotN;
   float dimm = 1.0;
-  if (inside) {
+  if (dark_backside && inside) {
     dimm  = 0.5;
   }
 
@@ -342,7 +343,7 @@ vec4 calcLight(vec4 color, vec3 position, vec3 norm, bool inside)
 
   // spec = Light[lightIndex].Ls * Material.Ks * pow( max( dot(r,v) , 0.0 ), Material.Shininess );
   float spec = pow( max( dot(r,v) , 0.0 ), light_shininess );
-  if(diffuse==0.0) spec = 0.0;
+  if(diffuse==0.0 || light_shininess==0.0) spec = 0.0;
   return vec4(dimm*(color.xyz*(light_ambient+diffuse) + spec*light_spec*vec3(1,1,1)), color.w);
 }
 

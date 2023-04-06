@@ -311,6 +311,7 @@ export class Scene extends WebGLScene {
     uniforms.colormap_max = new THREE.Uniform( 1.0 );
     uniforms.function_mode = new THREE.Uniform( 0 );
     uniforms.colormap_size = new THREE.Uniform( new THREE.Vector2(1,1) );
+    uniforms.dark_backside = new THREE.Uniform( true );
 
     this.colormap_object = null;
     this.edges_object = null;
