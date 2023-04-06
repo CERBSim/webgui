@@ -52,8 +52,10 @@ export class Scene extends WebGLScene {
 
   render_data: any;
   scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  ortho_camera: THREE.OrthographicCamera;
+  perspective_camera: THREE.PerspectiveCamera;
+  orthographic_camera: THREE.OrthographicCamera;
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+  widgets_camera: THREE.OrthographicCamera;
   clipping_plane: THREE.Vector4;
   three_clipping_plane: THREE.Plane;
   world_clipping_plane: THREE.Plane;
@@ -204,10 +206,12 @@ export class Scene extends WebGLScene {
     const h = this.element.parentNode.clientHeight - 6;
 
     const aspect = w/h;
-    this.ortho_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, -100, 100 );
+    this.widgets_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, -100, 100 );
     if(this.colormap_object)
         this.colormap_object.onResize(w,h);
       this.camera.aspect = aspect;
+      this.camera.left = -aspect;
+      this.camera.right = aspect;
       this.uniforms.aspect.value = aspect;
       this.renderer.setSize( w, h );
       this.camera.updateProjectionMatrix();
@@ -362,12 +366,13 @@ export class Scene extends WebGLScene {
 
     this.buffer_scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(
-      40,                                         //FOV
-      this.element.offsetWidth/ this.element.offsetHeight, // aspect
-      1,                                          //near clipping plane
-      100                                         //far clipping plane
-    );
+    const aspect = this.element.offsetWidth/ this.element.offsetHeight;
+    const near = 1;
+    const far = 100;
+    const fov = 40;
+    this.perspective_camera = new THREE.PerspectiveCamera( fov, aspect, near, far );
+    this.orthographic_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, near, far );
+    this.camera = this.perspective_camera
 
     this.camera.position.set( 0.0, 0.0, 3 );
 
@@ -1043,7 +1048,7 @@ export class Scene extends WebGLScene {
 
     this.requestId = 0;
 
-    if(this.ortho_camera === undefined)
+    if(this.widgets_camera === undefined)
       return; // not fully initialized yet
 
     this.handleEvent('beforerender', [this, frame_time]);
@@ -1160,10 +1165,10 @@ export class Scene extends WebGLScene {
     }
 
     if(this.colormap_object && gui_status.Misc.colormap)
-      this.renderer.render( this.colormap_object, this.ortho_camera );
+      this.renderer.render( this.colormap_object, this.widgets_camera );
 
     if(this.axes_object && gui_status.Misc.axes)
-      this.renderer.render( this.axes_object, this.ortho_camera );
+      this.renderer.render( this.axes_object, this.widgets_camera );
 
 
     if(gui_status.Complex.animate)

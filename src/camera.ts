@@ -41,7 +41,6 @@ export class CameraControls extends THREE.EventDispatcher {
         super();
         if ( domElement === undefined ) console.log( 'domElement is undefined' );
         if ( domElement === document ) console.error( '"document" should not be used as the target "domElement". Please use "renderer.domElement" instead.' );
-        if ( !cameraObject.isPerspectiveCamera ) console.error('camera must be perspective camera');
 
         this.scene = scene;
         this.mesh_radius = scene.mesh_radius;
@@ -95,9 +94,9 @@ export class CameraControls extends THREE.EventDispatcher {
         const rect = this.scene.canvas.getBoundingClientRect();
         for(let i=0; i< this.scene.labels.length; i++) {
             let {el, p} = this.scene.labels[i];
-            if(this.scene.ortho_camera && i<3) {
+            if(this.scene.widgets_camera && i<3) {
                 vector.copy(p).applyMatrix4(this.scene.axes_object.matrixWorld);
-                vector.project( this.scene.ortho_camera );
+                vector.project( this.scene.widgets_camera );
                 // map to 2D screen space
                 const x = Math.round( (   vector.x + 1 ) * rect.width  / 2 );
                 const y = Math.round( ( - vector.y + 1 ) * rect.height / 2 );
@@ -185,6 +184,7 @@ export class CameraControls extends THREE.EventDispatcher {
     storeSettings( settings ) {
         settings.mat = this.mat;
         settings.center = this.center;
+        settings.isPerspectiveCamera = this.cameraObject.isPerspectiveCamera;
     }
 
     keydown(event) {
