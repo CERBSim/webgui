@@ -375,10 +375,11 @@ export class Scene extends WebGLScene {
     this.orthographic_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, near, far );
     this.camera = this.perspective_camera
 
-    this.camera.position.set( 0.0, 0.0, 3 );
+    this.perspective_camera.position.set( 0.0, 0.0, 3 );
+    this.orthographic_camera.position.set( 0.0, 0.0, 3 );
 
     this.clipping_plane = new THREE.Vector4(0,0,1,0);
-    uniforms.aspect = new THREE.Uniform( this.camera.aspect ); 
+    uniforms.aspect = new THREE.Uniform( this.perspective_camera.aspect ); 
     uniforms.line_thickness = new THREE.Uniform( 0.001 ); 
     uniforms.clipping_plane = new THREE.Uniform( this.clipping_plane ); 
     uniforms.highlight_selected_face = new THREE.Uniform( false );
@@ -740,7 +741,7 @@ export class Scene extends WebGLScene {
 
     this.scene.add( this.pivot );
 
-    this.controls = new CameraControls(this.camera, this, this.renderer.domElement );
+    this.controls = new CameraControls(this, this.renderer.domElement );
     this.controls.addEventListener('change', animate);
 
     this.updateRenderData(render_data);

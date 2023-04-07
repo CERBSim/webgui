@@ -22,7 +22,6 @@ export class CameraControls extends THREE.EventDispatcher {
     scene: any;
     center: any;
     mesh_radius: any;
-    cameraObject: any;
     pivotObject: any;
 
     onSelect: any = null;
@@ -37,7 +36,7 @@ export class CameraControls extends THREE.EventDispatcher {
 
     keys = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, CLOCKWISE: 65, COUNTERCLOCKWISE: 83};
 
-    constructor(cameraObject, scene, domElement) {
+    constructor(scene, domElement) {
         super();
         if ( domElement === undefined ) console.log( 'domElement is undefined' );
         if ( domElement === document ) console.error( '"document" should not be used as the target "domElement". Please use "renderer.domElement" instead.' );
@@ -49,7 +48,6 @@ export class CameraControls extends THREE.EventDispatcher {
         this.mat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
         this.mat.premultiply(new THREE.Matrix4().makeScale(s,s,s));
 
-        this.cameraObject = cameraObject;
         this.pivotObject = scene.pivot;
         this.domElement = domElement;
 
@@ -106,7 +104,7 @@ export class CameraControls extends THREE.EventDispatcher {
             }
             if(i>=3) {
                 vector.copy(p).applyMatrix4(this.mat);
-                vector.project( this.cameraObject );
+                vector.project( this.scene.camera );
                 // map to 2D screen space
                 const x = Math.round( (   vector.x + 1 ) * rect.width  / 2 );
                 const y = Math.round( ( - vector.y + 1 ) * rect.height / 2 );
@@ -184,7 +182,7 @@ export class CameraControls extends THREE.EventDispatcher {
     storeSettings( settings ) {
         settings.mat = this.mat;
         settings.center = this.center;
-        settings.isPerspectiveCamera = this.cameraObject.isPerspectiveCamera;
+        settings.isPerspectiveCamera = this.scene.camera.isPerspectiveCamera;
     }
 
     keydown(event) {
