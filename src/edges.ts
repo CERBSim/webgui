@@ -100,8 +100,9 @@ export class FieldLinesObject extends THREE.Mesh {
   data;
   buffer_geometry: THREE.BufferGeometry;
   name_: string;
+  index: number;
 
-  constructor(data, global_uniforms) {
+  constructor(data, global_uniforms, index) {
     const geo = new THREE.InstancedBufferGeometry();
     const cyl = new THREE.CylinderGeometry(1, 1, 1, 8, 1, true);
     cyl.translate(0, 0.5, 0);
@@ -129,6 +130,7 @@ export class FieldLinesObject extends THREE.Mesh {
     super(geo, material);
     this.name_ = data.name;
     this.buffer_geometry = geo;
+    this.index = index;
     (this as THREE.Mesh).frustumCulled = false;
   }
 
@@ -137,16 +139,16 @@ export class FieldLinesObject extends THREE.Mesh {
   }
 
   updateRenderData(data) {
-    this.data = data;
+    this.data = this.index !== null ? data[this.index] : data;
     const setAttribute = (name: string, num_components: number) => {
-      const vals = new Float32Array(data[name]);
+      const vals = new Float32Array(this.data[name]);
       const attr = new THREE.InstancedBufferAttribute(vals, num_components);
       this.buffer_geometry.setAttribute(name, attr);
     };
     setAttribute('pstart', 3);
     setAttribute('pend', 3);
     setAttribute('value', 1);
-    this.buffer_geometry.instanceCount = data.value.length;
+    this.buffer_geometry.instanceCount = this.data.value.length;
   }
 }
 
@@ -154,8 +156,9 @@ export class LinesObject extends THREE.LineSegments {
   data;
   buffer_geometry: THREE.BufferGeometry;
   name_: string;
+  index: number;
 
-  constructor(data) {
+  constructor(data, index) {
     const geo = new THREE.BufferGeometry();
 
     geo.setAttribute(
@@ -169,6 +172,7 @@ export class LinesObject extends THREE.LineSegments {
     super(geo, material);
     this.name_ = data.name;
     this.buffer_geometry = geo;
+    this.index = index;
   }
 
   update(gui_status) {
@@ -176,10 +180,10 @@ export class LinesObject extends THREE.LineSegments {
   }
 
   updateRenderData(data) {
-    this.data = data;
+    this.data = data[this.index];
     this.buffer_geometry.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute(data.position, 3)
+      new THREE.Float32BufferAttribute(this.data.position, 3)
     );
   }
 }
@@ -188,8 +192,9 @@ export class PointsObject extends THREE.Points {
   data;
   buffer_geometry: THREE.BufferGeometry;
   name_: string;
+  index: number;
 
-  constructor(data) {
+  constructor(data, index) {
     const color = new THREE.Color(data.color || 0x808080);
     const n = 101;
     const tdata = new Uint8Array(4 * n * n);
@@ -227,6 +232,7 @@ export class PointsObject extends THREE.Points {
     super(geo, material);
     this.name_ = data.name;
     this.buffer_geometry = geo;
+    this.index = index;
   }
 
   update(gui_status) {
@@ -234,10 +240,10 @@ export class PointsObject extends THREE.Points {
   }
 
   updateRenderData(data) {
-    this.data = data;
+    this.data = data[this.index];
     this.buffer_geometry.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute(data.position, 3)
+      new THREE.Float32BufferAttribute(this.data.position, 3)
     );
   }
 }

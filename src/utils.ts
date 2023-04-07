@@ -268,3 +268,137 @@ export function mixB64(a, b, t) {
 
   return d1;
 }
+
+function unpackEdgeData(edge_data, vertices, values, funcdim) {
+  const edges = new Int32Array(readB64Raw(edge_data));
+  let ncomps = 2;
+  if (funcdim > 1) ncomps += 2;
+
+  const edge_points = new Array(ncomps);
+  for (let i_comp = 0; i_comp < ncomps; i_comp++) edge_points[i_comp] = [];
+
+  const nvert = edges.length;
+
+  for (let i_vert = 0; i_vert < nvert; i_vert++) {
+    const vi = edges[i_vert];
+    // add vertex coordinates and first function value
+    for (let k = 0; k < 3; k++)
+      edge_points[i_vert % 2].push(vertices[3 * vi + k]);
+
+    // add first function value (4th component of attribute p0,p1,p2 for each vertex)
+    edge_points[i_vert % 2].push(values[funcdim * vi]);
+
+    // add other function values to extra attributes (v0,v1,v2)
+    if (ncomps > 2)
+      for (let k = 1; k < funcdim; k++) {
+        edge_points[2 + (i_vert % 2)].push(values[funcdim * vi + k]);
+      }
+  }
+  return edge_points;
+}
+
+export function unpackIndexedData(data) {
+  let need_unpack = false;
+
+  if (data.draw_surf && data.Bezier_points === undefined) need_unpack = true;
+
+  if (data.draw_surf && data.Bezier_trig_points === undefined)
+    need_unpack = true;
+
+  if (data.draw_vol && data.points3d === undefined) need_unpack = true;
+
+  if (!need_unpack) return;
+
+  const startTime = performance.now();
+  const vertices = readB64(data.vertices);
+  const values = readB64(data.nodal_function_values);
+  const funcdim = data.funcdim;
+  data.vertices = vertices;
+  data.nodal_function_values = values;
+  let trigs = undefined;
+
+  if (data.segs)
+    data.edges = unpackEdgeData(data.segs, vertices, values, funcdim);
+
+  if (data.draw_surf) {
+    trigs = new Int32Array(readB64Raw(data.trigs));
+    data.trigs = trigs;
+    let ncomps = 3;
+    if (funcdim > 1) ncomps += 3;
+
+    const trig_points = new Array(ncomps);
+    for (let i_comp = 0; i_comp < ncomps; i_comp++) trig_points[i_comp] = [];
+
+    const nvert = trigs.length;
+
+    for (let i_vert = 0; i_vert < nvert; i_vert++) {
+      const vi = trigs[i_vert];
+      // add vertex coordinates and first function value
+      for (let k = 0; k < 3; k++)
+        trig_points[i_vert % 3].push(vertices[3 * vi + k]);
+
+      // add first function value (4th component of attribute p0,p1,p2 for each vertex)
+      trig_points[i_vert % 3].push(values[funcdim * vi]);
+
+      // add other function values to extra attributes (v0,v1,v2)
+      if (ncomps > 3) {
+        for (let k = 1; k < funcdim; k++)
+          trig_points[3 + (i_vert % 3)].push(values[funcdim * vi + k]);
+        for (let k = funcdim; k < 5; k++)
+          trig_points[3 + (i_vert % 3)].push(0.0);
+      }
+    }
+
+    data.Bezier_trig_points = trig_points;
+  }
+
+  if (data.show_wireframe && trigs) {
+    const ntrigs = Math.floor(trigs.length / 3);
+
+    const edges = [];
+    for (let i = 0; i < ntrigs; i++) {
+      for (let k = 0; k < 3; k++) {
+        edges.push(trigs[3 * i + k], trigs[3 * i + ((k + 1) % 3)]);
+      }
+    }
+    data.Bezier_points = unpackEdgeData(edges, vertices, values, funcdim);
+  }
+
+  if (data.draw_vol) {
+    let ncomps = 4;
+    if (funcdim > 1) ncomps += 2;
+
+    const tets = new Int32Array(readB64Raw(data.tets));
+    const tet_points = new Array(ncomps);
+    for (let i_comp = 0; i_comp < ncomps; i_comp++) tet_points[i_comp] = [];
+
+    const nvert = tets.length;
+    data.tets = tets;
+
+    for (let i_vert = 0; i_vert < nvert; i_vert++) {
+      const vi = tets[i_vert];
+      let icomp = i_vert % 4;
+
+      // add vertex coordinates and first function value
+      for (let k = 0; k < 3; k++) tet_points[icomp].push(vertices[3 * vi + k]);
+
+      // add first function value (4th component of attribute p0,p1,p2 for each vertex)
+      tet_points[icomp].push(values[funcdim * vi]);
+
+      if (ncomps > 4) {
+        icomp = 4 + Math.floor(icomp / 2);
+        // add other function values to extra attributes (v0_1,v2_3)
+        for (let k = 1; k < 3; k++) {
+          const val = k < funcdim ? values[funcdim * vi + k] : 0.0;
+          tet_points[icomp].push(val);
+        }
+      }
+    }
+
+    data.points3d = tet_points;
+  }
+
+  const endTime = performance.now();
+  console.log(`Unpacking nodal data took ${endTime - startTime} milliseconds`);
+  return data;
+}

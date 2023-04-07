@@ -1,10 +1,17 @@
-import { WebGLScene, getShader, setKeys, log } from './utils';
+import {
+  WebGLScene,
+  getShader,
+  setKeys,
+  log,
+  unpackIndexedData,
+} from './utils';
+
+import { RenderObject } from './render_object';
 
 import {
   MeshFunctionObject,
   WireframeObject,
   ClippingFunctionObject,
-  unpackIndexedData,
 } from './mesh';
 
 import {
@@ -27,14 +34,14 @@ import './styles.css';
 
 export { THREE };
 
-function makeRenderObject(obj, global_uniforms) {
-  switch (obj.type) {
+function makeRenderObject(obj, i, global_uniforms) {
+  switch (obj[i].type) {
     case 'lines':
-      return new LinesObject(obj);
+      return new LinesObject(obj, i);
     case 'points':
-      return new PointsObject(obj);
+      return new PointsObject(obj, i);
     case 'fieldlines':
-      return new FieldLinesObject(obj, global_uniforms);
+      return new FieldLinesObject(obj, i, global_uniforms);
   }
 }
 
@@ -58,6 +65,7 @@ export class Scene extends WebGLScene {
   gui;
   gui_status_default;
   gui_status;
+  gui_objects;
   gui_functions;
   gui_container;
   uniforms;
@@ -276,6 +284,15 @@ export class Scene extends WebGLScene {
     this.animate();
   }
 
+  addRenderObject(object: RenderObject) {
+    this.render_objects.push(object);
+    if (object.three_object) this.pivot.add(object.three_object);
+    const name = object.name;
+    this.gui_status.Objects[name] = true;
+    const animate = () => this.animate();
+    this.gui_objects.add(this.gui_status.Objects, name).onChange(animate);
+  }
+
   initCanvas(element, webgl_args) {
     WebGLScene.prototype.initCanvas.call(this, element, webgl_args);
     // label with NGSolve version at right lower corner
@@ -416,6 +433,8 @@ export class Scene extends WebGLScene {
     this.gui_status = gui.gui_status;
     const gui_status = this.gui_status;
     this.gui_status_default = gui.gui_status_default;
+    gui_status.Objects = {};
+    this.gui_objects = gui.addFolder('Objects');
 
     llog.info('GUI', gui);
     llog.info('gui_status', gui_status);
@@ -579,14 +598,10 @@ export class Scene extends WebGLScene {
     }
 
     if (render_data.show_mesh) {
-      this.mesh_object = new MeshFunctionObject(render_data, uniforms);
-      this.pivot.add(this.mesh_object);
-      gui.add(gui_status, 'elements').onChange(animate);
+      this.addRenderObject(new MeshFunctionObject(render_data, uniforms));
     }
 
     if (render_data.objects) {
-      gui_status.Objects = {};
-      const gui_objects = gui.addFolder('Objects');
       const objects = render_data.objects;
       for (let i = 0; i < objects.length; i++) {
         // console.log("object", objects[i].type);
@@ -602,13 +617,13 @@ export class Scene extends WebGLScene {
             )
           );
         } else {
-          const obj = makeRenderObject(objects[i], uniforms);
+          const obj = makeRenderObject(objects, i, uniforms);
           this.render_objects.push(obj);
           this.pivot.add(obj);
           const name = objects[i].name;
           if (!(name in gui_status.Objects)) {
             gui_status.Objects[name] = true;
-            gui_objects.add(gui_status.Objects, name).onChange(animate);
+            this.gui_objects.add(gui_status.Objects, name).onChange(animate);
           }
         }
       }
@@ -848,7 +863,7 @@ export class Scene extends WebGLScene {
 
     for (let i = 0; i < this.render_objects.length; i++)
       if (this.render_objects[i] != null)
-        this.render_objects[i].updateRenderData(render_data.objects[i]);
+        this.render_objects[i].updateRenderData(render_data);
 
     if (this.clipping_function_object != null)
       this.clipping_function_object.updateRenderData(render_data);
@@ -1110,11 +1125,11 @@ export class Scene extends WebGLScene {
         ? 'visible'
         : 'hidden';
 
-    if (this.edges_object != null) this.edges_object.update(gui_status);
+    // if (this.edges_object != null) this.edges_object.update(gui_status);
 
-    if (this.wireframe_object != null) this.wireframe_object.update(gui_status);
+    // if (this.wireframe_object != null) this.wireframe_object.update(gui_status);
 
-    if (this.mesh_object != null) this.mesh_object.update(gui_status);
+    // if (this.mesh_object != null) this.mesh_object.update(gui_status);
 
     for (let i = 0; i < this.render_objects.length; i++)
       if (this.render_objects[i] != null)

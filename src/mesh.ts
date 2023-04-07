@@ -1,162 +1,17 @@
-import {
-  getShader,
-  readB64,
-  readB64Raw,
-  mixB64,
-  MAX_SUBDIVISION,
-} from './utils';
+import { getShader, mixB64, readB64, MAX_SUBDIVISION } from './utils';
+
+import { RenderObject } from './render_object';
 
 import * as THREE from 'three';
 
-function unpackEdgeData(edge_data, vertices, values, funcdim) {
-  const edges = new Int32Array(readB64Raw(edge_data));
-  let ncomps = 2;
-  if (funcdim > 1) ncomps += 2;
-
-  const edge_points = new Array(ncomps);
-  for (let i_comp = 0; i_comp < ncomps; i_comp++) edge_points[i_comp] = [];
-
-  const nvert = edges.length;
-
-  for (let i_vert = 0; i_vert < nvert; i_vert++) {
-    const vi = edges[i_vert];
-    // add vertex coordinates and first function value
-    for (let k = 0; k < 3; k++)
-      edge_points[i_vert % 2].push(vertices[3 * vi + k]);
-
-    // add first function value (4th component of attribute p0,p1,p2 for each vertex)
-    edge_points[i_vert % 2].push(values[funcdim * vi]);
-
-    // add other function values to extra attributes (v0,v1,v2)
-    if (ncomps > 2)
-      for (let k = 1; k < funcdim; k++) {
-        edge_points[2 + (i_vert % 2)].push(values[funcdim * vi + k]);
-      }
-  }
-  return edge_points;
-}
-
-export function unpackIndexedData(data) {
-  let need_unpack = false;
-
-  if (data.draw_surf && data.Bezier_points === undefined) need_unpack = true;
-
-  if (data.draw_surf && data.Bezier_trig_points === undefined)
-    need_unpack = true;
-
-  if (data.draw_vol && data.points3d === undefined) need_unpack = true;
-
-  if (!need_unpack) return;
-
-  const startTime = performance.now();
-  const vertices = readB64(data.vertices);
-  const values = readB64(data.nodal_function_values);
-  const funcdim = data.funcdim;
-  data.vertices = vertices;
-  data.nodal_function_values = values;
-  let trigs = undefined;
-
-  if (data.segs)
-    data.edges = unpackEdgeData(data.segs, vertices, values, funcdim);
-
-  if (data.draw_surf) {
-    trigs = new Int32Array(readB64Raw(data.trigs));
-    data.trigs = trigs;
-    let ncomps = 3;
-    if (funcdim > 1) ncomps += 3;
-
-    const trig_points = new Array(ncomps);
-    for (let i_comp = 0; i_comp < ncomps; i_comp++) trig_points[i_comp] = [];
-
-    const nvert = trigs.length;
-
-    for (let i_vert = 0; i_vert < nvert; i_vert++) {
-      const vi = trigs[i_vert];
-      // add vertex coordinates and first function value
-      for (let k = 0; k < 3; k++)
-        trig_points[i_vert % 3].push(vertices[3 * vi + k]);
-
-      // add first function value (4th component of attribute p0,p1,p2 for each vertex)
-      trig_points[i_vert % 3].push(values[funcdim * vi]);
-
-      // add other function values to extra attributes (v0,v1,v2)
-      if (ncomps > 3) {
-        for (let k = 1; k < funcdim; k++)
-          trig_points[3 + (i_vert % 3)].push(values[funcdim * vi + k]);
-        for (let k = funcdim; k < 5; k++)
-          trig_points[3 + (i_vert % 3)].push(0.0);
-      }
-    }
-
-    data.Bezier_trig_points = trig_points;
-  }
-
-  if (data.show_wireframe && trigs) {
-    const ntrigs = Math.floor(trigs.length / 3);
-
-    const edges = [];
-    for (let i = 0; i < ntrigs; i++) {
-      for (let k = 0; k < 3; k++) {
-        edges.push(trigs[3 * i + k], trigs[3 * i + ((k + 1) % 3)]);
-      }
-    }
-    data.Bezier_points = unpackEdgeData(edges, vertices, values, funcdim);
-  }
-
-  if (data.draw_vol) {
-    let ncomps = 4;
-    if (funcdim > 1) ncomps += 2;
-
-    const tets = new Int32Array(readB64Raw(data.tets));
-    const tet_points = new Array(ncomps);
-    for (let i_comp = 0; i_comp < ncomps; i_comp++) tet_points[i_comp] = [];
-
-    const nvert = tets.length;
-    data.tets = tets;
-
-    for (let i_vert = 0; i_vert < nvert; i_vert++) {
-      const vi = tets[i_vert];
-      let icomp = i_vert % 4;
-
-      // add vertex coordinates and first function value
-      for (let k = 0; k < 3; k++) tet_points[icomp].push(vertices[3 * vi + k]);
-
-      // add first function value (4th component of attribute p0,p1,p2 for each vertex)
-      tet_points[icomp].push(values[funcdim * vi]);
-
-      if (ncomps > 4) {
-        icomp = 4 + Math.floor(icomp / 2);
-        // add other function values to extra attributes (v0_1,v2_3)
-        for (let k = 1; k < 3; k++) {
-          const val = k < funcdim ? values[funcdim * vi + k] : 0.0;
-          tet_points[icomp].push(val);
-        }
-      }
-    }
-
-    data.points3d = tet_points;
-  }
-
-  const endTime = performance.now();
-  console.log(`Unpacking nodal data took ${endTime - startTime} milliseconds`);
-  return data;
-}
-
-export class MeshFunctionObject extends THREE.Mesh {
-  uniforms;
-  data;
+export class MeshFunctionObject extends RenderObject {
   mesh_only: boolean;
-  buffer_geometry: THREE.BufferGeometry;
+  geometry: THREE.BufferGeometry;
 
-  constructor(data, global_uniforms) {
-    if (data === undefined) {
-      // make clone() work
-      super();
-      return;
-    }
+  constructor(data, global_uniforms, path = []) {
+    super(data, global_uniforms, path);
     const have_deformation = data.mesh_dim == data.funcdim && !data.is_complex;
     const have_z_deformation = data.mesh_dim == 2 && data.funcdim > 0;
-    const mesh_only = data.funcdim == 0;
     const uniforms = {
       n_segments: new THREE.Uniform(5),
       ...global_uniforms,
@@ -210,26 +65,27 @@ export class MeshFunctionObject extends THREE.Mesh {
     mesh_material.polygonOffsetFactor = 1;
     mesh_material.polygonOffsetUnits = 1;
 
-    super(geo, mesh_material);
-    (this as THREE.Mesh).name = data.name;
+    this.three_object = new THREE.Mesh(geo, mesh_material);
+    this.three_object.name = data.name;
+    this.name = 'Surface';
     this.data = data;
-    this.mesh_only = mesh_only;
     this.uniforms = uniforms;
-    this.buffer_geometry = geo;
+    this.geometry = geo;
   }
 
   update(gui_status) {
-    (this as THREE.Mesh).visible = gui_status.elements;
+    super.update(gui_status);
     if (gui_status.subdivision !== undefined) {
       const sd = gui_status.subdivision;
       this.uniforms.n_segments.value = sd;
-      this.buffer_geometry.setDrawRange(0, 3 * sd * sd);
+      this.geometry.setDrawRange(0, 3 * sd * sd);
     }
   }
 
   updateRenderData(data, data2, t) {
-    this.data = data;
-    const geo = this.buffer_geometry;
+    this.data = this.extractData(data);
+    console.log('update mesh render data', data);
+    const geo = this.geometry;
     const pdata = data.Bezier_trig_points;
     const pdata2 = data2 && data2.Bezier_trig_points;
     const do_interpolate = t !== undefined;
@@ -291,6 +147,7 @@ export class WireframeObject extends THREE.Line {
   data;
   mesh_only: boolean;
   buffer_geometry: THREE.BufferGeometry;
+  name_: string;
 
   constructor(data, global_uniforms) {
     const have_deformation = data.mesh_dim == data.funcdim && !data.is_complex;
@@ -318,6 +175,7 @@ export class WireframeObject extends THREE.Line {
     super(geo, wireframe_material);
     this.uniforms = uniforms;
     this.buffer_geometry = geo;
+    this.name_ = 'Wireframe';
   }
 
   update(gui_status) {
