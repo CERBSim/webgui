@@ -1,56 +1,48 @@
-import {
-  WebGLScene,
-  getShader,
-  readB64,
-  setKeys,
-  log,
-} from './utils';
+import { WebGLScene, getShader, setKeys, log } from './utils';
 
 import {
-    MeshFunctionObject,
-    WireframeObject,
-    ClippingFunctionObject,
-    unpackIndexedData,
+  MeshFunctionObject,
+  WireframeObject,
+  ClippingFunctionObject,
+  unpackIndexedData,
 } from './mesh';
 
 import {
-    PointsObject,
-    LinesObject,
-    ThickEdgesObject,
-    FieldLinesObject,
+  PointsObject,
+  LinesObject,
+  ThickEdgesObject,
+  FieldLinesObject,
 } from './edges';
 
 import { ColormapObject } from './colormap';
 import { CameraControls } from './camera';
 
-import { Grid3D, Label3D }  from './grid';
-import { GUI }  from './gui';
+import { Label3D } from './grid';
+import { GUI } from './gui';
 
 import * as THREE from 'three';
 // import Stats from "https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min";
-import * as dat from 'dat.gui';
 
-const css = require('./styles.css');
+// const css = require('./styles.css');
 
-export {THREE};
+export { THREE };
 
-function makeRenderObject( obj, global_uniforms ) {
-    switch(obj.type) {
-        case "lines":
-            return new LinesObject(obj);
-        case "points":
-            return new PointsObject(obj);
-        case "fieldlines":
-            return new FieldLinesObject(obj, global_uniforms);
-    }
+function makeRenderObject(obj, global_uniforms) {
+  switch (obj.type) {
+    case 'lines':
+      return new LinesObject(obj);
+    case 'points':
+      return new PointsObject(obj);
+    case 'fieldlines':
+      return new FieldLinesObject(obj, global_uniforms);
+  }
 }
 
 export class Scene extends WebGLScene {
+  labels;
+  tooltip;
 
-  labels: any;
-  tooltip: any;
-
-  render_data: any;
+  render_data;
   scene: THREE.Scene;
   perspective_camera: THREE.PerspectiveCamera;
   orthographic_camera: THREE.OrthographicCamera;
@@ -60,41 +52,41 @@ export class Scene extends WebGLScene {
   three_clipping_plane: THREE.Plane;
   world_clipping_plane: THREE.Plane;
   light_dir: THREE.Vector3;
-  stats: any;
-  event_handlers: any;
+  stats;
+  event_handlers;
 
-  gui: any;
-  gui_status_default: any;
-  gui_status: any;
-  gui_functions: any;
-  gui_container: any;
-  uniforms: any;
+  gui;
+  gui_status_default;
+  gui_status;
+  gui_functions;
+  gui_container;
+  uniforms;
 
-  colormap_object: any;
-  edges_object: any;
+  colormap_object;
+  edges_object;
   wireframe_object: THREE.Line;
-  mesh_object: any;
+  mesh_object;
   clipping_function_object: THREE.Mesh;
   clipping_vectors_object: THREE.Mesh;
-  axes_object: any;
-  center_tag: any;
-  grid: any;
-  render_objects: any = [];
+  axes_object;
+  center_tag;
+  grid;
+  render_objects = [];
 
   is_complex: boolean;
-  trafo: any;
+  trafo;
   mouse: THREE.Vector2;
 
   last_frame_time: number;
 
-  multidim_controller: any;
+  multidim_controller;
 
-  phase_controller: any;
+  phase_controller;
 
   buffer_scene: THREE.Scene;
   buffer_object: THREE.Mesh;
   buffer_camera: THREE.OrthographicCamera;
-  buffer_texture: any;
+  buffer_texture;
 
   mesh_center: THREE.Vector3;
   mesh_radius: number;
@@ -104,13 +96,13 @@ export class Scene extends WebGLScene {
   have_deformation: boolean;
   have_z_deformation: boolean;
 
-  controls: any;
+  controls;
 
   funcdim: number;
   mesh_only: boolean;
 
-  version_object: any;
-  index_render_target: any;
+  version_object;
+  index_render_target;
 
   constructor() {
     super();
@@ -119,54 +111,48 @@ export class Scene extends WebGLScene {
     this.event_handlers = {};
   }
 
-  on( event_name, handler ) {
-    if(this.event_handlers[event_name] == undefined)
+  on(event_name, handler) {
+    if (this.event_handlers[event_name] == undefined)
       this.event_handlers[event_name] = [];
 
-    this.event_handlers[event_name].push( handler );
+    this.event_handlers[event_name].push(handler);
   }
 
-  handleEvent( event_name, args )
-  {
-    let handlers = this.event_handlers[event_name];
-    if(handlers == undefined)
-      return;
+  handleEvent(event_name, args) {
+    const handlers = this.event_handlers[event_name];
+    if (handlers == undefined) return;
 
-    for(var i=0; i<handlers.length; i++)
-      handlers[i].apply(null, args);
+    for (let i = 0; i < handlers.length; i++) handlers[i].apply(null, args);
   }
 
   cleanup() {
-    if(this.labels && this.labels.length)
-        this.labels.map( (label) => label.el.remove() );
+    if (this.labels && this.labels.length)
+      this.labels.map((label) => label.el.remove());
 
-    if(this.colormap_object)
-        this.colormap_object.cleanup();
+    if (this.colormap_object) this.colormap_object.cleanup();
 
     this.labels = [];
-    if(this.tooltip)
-        this.tooltip.remove();
+    if (this.tooltip) this.tooltip.remove();
   }
 
   getGuiSettings() {
-      let settings = JSON.parse(JSON.stringify(this.gui_status)); // deep-copy settings
-      settings.camera = {};
-      this.controls.storeSettings( settings.camera );
-      return JSON.parse(JSON.stringify(settings));
+    const settings = JSON.parse(JSON.stringify(this.gui_status)); // deep-copy settings
+    settings.camera = {};
+    this.controls.storeSettings(settings.camera);
+    return JSON.parse(JSON.stringify(settings));
   }
 
-  setGuiSettings (settings) {
+  setGuiSettings(settings) {
     setKeys(this.gui_status, settings);
 
-    if(settings.camera)
-        this.controls.loadSettings( settings.camera );
+    if (settings.camera) this.controls.loadSettings(settings.camera);
 
     // stats.showPanel(parseInt(this.gui_status.Misc.stats));
-    for (var i in this.gui.__controllers)
+    for (const i in this.gui.__controllers)
       this.gui.__controllers[i].updateDisplay();
-    for (var f in this.gui.__folders) {
+    for (const f in this.gui.__folders) {
       const folder = this.gui.__folders[f];
-      for (var i in folder.__controllers)
+      for (const i in folder.__controllers)
         folder.__controllers[i].updateDisplay();
     }
     this.animate();
@@ -177,14 +163,14 @@ export class Scene extends WebGLScene {
   }
 
   requestFullscreen() {
-    let elem = this.element.parentNode;
+    const elem = this.element.parentNode;
 
     if (elem.requestFullscreen) {
       elem.requestFullscreen();
-    } else if(elem.webkitRequestFullScreen) {
+    } else if (elem.webkitRequestFullScreen) {
       // Webkit (works in Safari and Chrome Canary)
       elem.webkitRequestFullScreen();
-    }else if(elem.mozRequestFullScreen) {
+    } else if (elem.mozRequestFullScreen) {
       // Firefox
       elem.mozRequestFullScreen();
     }
@@ -195,60 +181,60 @@ export class Scene extends WebGLScene {
   }
 
   toggleFullscreen() {
-    if(this.isFullscreen())
-      this.exitFullscreen()
-    else
-      this.requestFullscreen()
+    if (this.isFullscreen()) this.exitFullscreen();
+    else this.requestFullscreen();
   }
 
   onResize() {
     const w = this.element.parentNode.clientWidth;
     const h = this.element.parentNode.clientHeight - 6;
 
-    const aspect = w/h;
-    this.widgets_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, -100, 100 );
-    if(this.colormap_object)
-        this.colormap_object.onResize(w,h);
-      this.camera.aspect = aspect;
-      this.camera.left = -aspect;
-      this.camera.right = aspect;
-      this.uniforms.aspect.value = aspect;
-      this.renderer.setSize( w, h );
-      this.camera.updateProjectionMatrix();
-      this.controls.update();
-      this.animate();
+    const aspect = w / h;
+    this.widgets_camera = new THREE.OrthographicCamera(
+      -aspect,
+      aspect,
+      1.0,
+      -1.0,
+      -100,
+      100
+    );
+    if (this.colormap_object) this.colormap_object.onResize(w, h);
+    this.camera.aspect = aspect;
+    this.camera.left = -aspect;
+    this.camera.right = aspect;
+    this.uniforms.aspect.value = aspect;
+    this.renderer.setSize(w, h);
+    this.camera.updateProjectionMatrix();
+    this.controls.update();
+    this.animate();
 
-
-      // this.index_render_target = 
-      //   const pixels = new Float32Array(4);
-      //   const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
+    // this.index_render_target =
+    //   const pixels = new Float32Array(4);
+    //   const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
   }
 
-  updateClippingPlaneCamera()
-  {
+  updateClippingPlaneCamera() {
     const n = this.gui_status.Vectors.grid_size;
-    var plane_center = new THREE.Vector3();
+    const plane_center = new THREE.Vector3();
     this.three_clipping_plane.projectPoint(this.mesh_center, plane_center);
-    var plane0 = this.three_clipping_plane.clone();
+    const plane0 = this.three_clipping_plane.clone();
     plane0.constant = 0.0;
     const normal = this.three_clipping_plane.normal;
 
+    const t2 = new THREE.Vector3();
+    if (Math.abs(normal.z) < 0.5)
+      plane0.projectPoint(new THREE.Vector3(0, 0, 1), t2);
+    else if (Math.abs(normal.y) < 0.5)
+      plane0.projectPoint(new THREE.Vector3(0, 1, 0), t2);
+    else plane0.projectPoint(new THREE.Vector3(1, 0, 0), t2);
 
-    var t2 = new THREE.Vector3();
-    if(Math.abs(normal.z)<0.5)
-      plane0.projectPoint(new THREE.Vector3(0,0,1), t2);
-    else if(Math.abs(normal.y)<0.5)
-      plane0.projectPoint(new THREE.Vector3(0,1,0), t2);
-    else
-      plane0.projectPoint(new THREE.Vector3(1,0,0), t2);
+    const t1 = new THREE.Vector3().crossVectors(t2, plane0.normal);
+    t1.setLength((2 * this.mesh_radius) / n);
+    t2.setLength((2 * this.mesh_radius) / n);
 
-    var t1 = new THREE.Vector3().crossVectors(t2, plane0.normal);
-    t1.setLength(2*this.mesh_radius/n);
-    t2.setLength(2*this.mesh_radius/n);
-
-    var position = plane_center.clone();
+    const position = plane_center.clone();
     position.addScaledVector(plane0.normal, 1);
-    var target = plane_center.clone();
+    const target = plane_center.clone();
     target.addScaledVector(plane0.normal, -1);
 
     this.buffer_camera.position.copy(position);
@@ -263,55 +249,58 @@ export class Scene extends WebGLScene {
     this.uniforms.grid_size.value = n;
   }
 
-  updateGridsize()
-  {
+  updateGridsize() {
     const n = this.gui_status.Vectors.grid_size;
-    this.buffer_texture = new THREE.WebGLRenderTarget( n, n, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
+    this.buffer_texture = new THREE.WebGLRenderTarget(n, n, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.NearestFilter,
+      type: THREE.FloatType,
+      format: THREE.RGBAFormat,
+    });
     this.uniforms.tex_values = new THREE.Uniform(this.buffer_texture.texture);
-    let r = this.mesh_radius;
-    this.buffer_camera = new THREE.OrthographicCamera( -r, r, r, -r, -10, 10 );
+    const r = this.mesh_radius;
+    this.buffer_camera = new THREE.OrthographicCamera(-r, r, r, -r, -10, 10);
 
-    const geo = <THREE.InstancedBufferGeometry>this.clipping_vectors_object.geometry;
-    var arrowid = new Float32Array(2*n * n);
-    for(var i=0; i<n; i++)
-    for(var j=0; j<n; j++) {
-      arrowid[2*(i*n + j)+0] = 1.0*(j+0.5)/n;
-      arrowid[2*(i*n + j)+1] = 1.0*(i+0.5)/n;
-    }
-    geo.instanceCount = n*n;
-    geo._maxInstanceCount = n*n;
-    geo.setAttribute( 'arrowid', new THREE.InstancedBufferAttribute( arrowid, 2 ) );
+    const geo = <THREE.InstancedBufferGeometry>(
+      this.clipping_vectors_object.geometry
+    );
+    const arrowid = new Float32Array(2 * n * n);
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++) {
+        arrowid[2 * (i * n + j) + 0] = (1.0 * (j + 0.5)) / n;
+        arrowid[2 * (i * n + j) + 1] = (1.0 * (i + 0.5)) / n;
+      }
+    geo.instanceCount = n * n;
+    geo._maxInstanceCount = n * n;
+    geo.setAttribute('arrowid', new THREE.InstancedBufferAttribute(arrowid, 2));
     this.animate();
   }
 
-  initCanvas (element, webgl_args)
-  {
+  initCanvas(element, webgl_args) {
     WebGLScene.prototype.initCanvas.call(this, element, webgl_args);
     // label with NGSolve version at right lower corner
-    this.version_object = document.createElement("div");
-    var style = 'bottom: 10px; right: 10px';
+    this.version_object = document.createElement('div');
+    // const style = 'bottom: 10px; right: 10px';
     // this.version_object.setAttribute("style",this.label_style+style); TODO
     this.container.appendChild(this.version_object);
 
-    window.addEventListener( 'resize', ()=>this.onResize(), false );
+    window.addEventListener('resize', () => this.onResize(), false);
   }
 
-  initRenderData (render_data)
-  {
-    const llog = log.local("initRenderData");
+  initRenderData(render_data) {
+    const llog = log.local('initRenderData');
     this.cleanup();
     unpackIndexedData(render_data);
 
-    if(this.gui!=null)
-        this.gui.destroy();
+    if (this.gui != null) this.gui.destroy();
 
     this.uniforms = {};
-    let uniforms = this.uniforms;
-    uniforms.colormap_min = new THREE.Uniform( 0.0 );
-    uniforms.colormap_max = new THREE.Uniform( 1.0 );
-    uniforms.function_mode = new THREE.Uniform( 0 );
-    uniforms.colormap_size = new THREE.Uniform( new THREE.Vector2(1,1) );
-    uniforms.dark_backside = new THREE.Uniform( true );
+    const uniforms = this.uniforms;
+    uniforms.colormap_min = new THREE.Uniform(0.0);
+    uniforms.colormap_max = new THREE.Uniform(1.0);
+    uniforms.function_mode = new THREE.Uniform(0);
+    uniforms.colormap_size = new THREE.Uniform(new THREE.Vector2(1, 1));
+    uniforms.dark_backside = new THREE.Uniform(true);
 
     this.colormap_object = null;
     this.edges_object = null;
@@ -330,20 +319,23 @@ export class Scene extends WebGLScene {
     this.render_data = render_data;
     this.funcdim = render_data.funcdim;
     this.is_complex = render_data.is_complex;
-    console.log("THREE", THREE);
+    console.log('THREE', THREE);
     // console.log("Stats", Stats);
 
-
-    this.have_deformation = render_data.mesh_dim == render_data.funcdim && !render_data.is_complex;
-    this.have_z_deformation = render_data.mesh_dim == 2 && render_data.funcdim>0;
-    this.mesh_only = render_data.funcdim==0;
+    this.have_deformation =
+      render_data.mesh_dim == render_data.funcdim && !render_data.is_complex;
+    this.have_z_deformation =
+      render_data.mesh_dim == 2 && render_data.funcdim > 0;
+    this.mesh_only = render_data.funcdim == 0;
 
     this.mesh_center = new THREE.Vector3().fromArray(render_data.mesh_center);
     this.mesh_radius = render_data.mesh_radius;
 
-    var version_text = document.createTextNode("NGSolve " + render_data.ngsolve_version);
+    const version_text = document.createTextNode(
+      'NGSolve ' + render_data.ngsolve_version
+    );
     this.version_object.innerHTML = '';
-    this.version_object.appendChild(version_text)
+    this.version_object.appendChild(version_text);
 
     this.scene = new THREE.Scene();
     // if(window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -351,9 +343,9 @@ export class Scene extends WebGLScene {
     this.axes_object = new THREE.AxesHelper(0.15);
     this.axes_object.matrixAutoUpdate = false;
 
-    this.tooltip = document.createElement("div");
-    var el_text = document.createTextNode("tooltip");
-    this.tooltip.appendChild(el_text)
+    this.tooltip = document.createElement('div');
+    const el_text = document.createTextNode('tooltip');
+    this.tooltip.appendChild(el_text);
 
     this.container.appendChild(this.tooltip);
 
@@ -367,60 +359,93 @@ export class Scene extends WebGLScene {
 
     this.buffer_scene = new THREE.Scene();
 
-    const aspect = this.element.offsetWidth/ this.element.offsetHeight;
+    const aspect = this.element.offsetWidth / this.element.offsetHeight;
     const near = 1;
     const far = 100;
     const fov = 40;
-    this.perspective_camera = new THREE.PerspectiveCamera( fov, aspect, near, far );
-    this.orthographic_camera = new THREE.OrthographicCamera( -aspect, aspect, 1.0, -1.0, near, far );
-    this.camera = this.perspective_camera
+    this.perspective_camera = new THREE.PerspectiveCamera(
+      fov,
+      aspect,
+      near,
+      far
+    );
+    this.orthographic_camera = new THREE.OrthographicCamera(
+      -aspect,
+      aspect,
+      1.0,
+      -1.0,
+      near,
+      far
+    );
+    this.camera = this.perspective_camera;
 
-    this.perspective_camera.position.set( 0.0, 0.0, 3 );
-    this.orthographic_camera.position.set( 0.0, 0.0, 3 );
+    this.perspective_camera.position.set(0.0, 0.0, 3);
+    this.orthographic_camera.position.set(0.0, 0.0, 3);
 
-    this.clipping_plane = new THREE.Vector4(0,0,1,0);
-    uniforms.aspect = new THREE.Uniform( this.perspective_camera.aspect ); 
-    uniforms.line_thickness = new THREE.Uniform( 0.001 ); 
-    uniforms.clipping_plane = new THREE.Uniform( this.clipping_plane ); 
-    uniforms.highlight_selected_face = new THREE.Uniform( false );
-    uniforms.selected_face = new THREE.Uniform( -1 );
-    // should cliping plane in pivot world be calculated in shader insted of passing it? 
+    this.clipping_plane = new THREE.Vector4(0, 0, 1, 0);
+    uniforms.aspect = new THREE.Uniform(this.perspective_camera.aspect);
+    uniforms.line_thickness = new THREE.Uniform(0.001);
+    uniforms.clipping_plane = new THREE.Uniform(this.clipping_plane);
+    uniforms.highlight_selected_face = new THREE.Uniform(false);
+    uniforms.selected_face = new THREE.Uniform(-1);
+    // should cliping plane in pivot world be calculated in shader insted of passing it?
     //currently not done because it is needed here anyways
 
-    this.three_clipping_plane  = new THREE.Plane( );
+    this.three_clipping_plane = new THREE.Plane();
 
-    var light_dir = new THREE.Vector3(0.5,0.5,1.5);
+    const light_dir = new THREE.Vector3(0.5, 0.5, 1.5);
     light_dir.normalize();
     uniforms.light_dir = new THREE.Uniform(light_dir);
-    var light_mat = new THREE.Vector4(0.3, 0.7, 10, 0.3); // ambient, diffuse, shininess, specularity
+    const light_mat = new THREE.Vector4(0.3, 0.7, 10, 0.3); // ambient, diffuse, shininess, specularity
     uniforms.light_mat = new THREE.Uniform(light_mat);
 
-    uniforms.do_clipping = new THREE.Uniform( false );
-    uniforms.render_depth = new THREE.Uniform( false );
-    this.trafo = new THREE.Vector2(1.0/2.0/(this.mesh_center.length()+this.mesh_radius), 1.0/2.0);
+    uniforms.do_clipping = new THREE.Uniform(false);
+    uniforms.render_depth = new THREE.Uniform(false);
+    this.trafo = new THREE.Vector2(
+      1.0 / 2.0 / (this.mesh_center.length() + this.mesh_radius),
+      1.0 / 2.0
+    );
     uniforms.trafo = new THREE.Uniform(this.trafo);
 
     this.mouse = new THREE.Vector2(0.0, 0.0);
     this.center_tag = null;
 
-    let animate = ()=>this.animate();
-    let gui = new GUI(this.container, render_data, animate);
+    const animate = () => this.animate();
+    const gui = new GUI(this.container, render_data, animate);
     this.gui = gui;
     this.gui_status = gui.gui_status;
-    let gui_status = this.gui_status;
+    const gui_status = this.gui_status;
     this.gui_status_default = gui.gui_status_default;
 
-    llog.info("GUI", gui);
-    llog.info("gui_status", gui_status);
+    llog.info('GUI', gui);
+    llog.info('gui_status', gui_status);
 
-    if(this.labels && this.labels.length)
-        this.labels.map( (label) => label.el.remove() );
+    if (this.labels && this.labels.length)
+      this.labels.map((label) => label.el.remove());
 
     this.labels = [];
-    const s = 0.20;
-    this.labels.push( Label3D( this.container, new THREE.Vector3(s,0,0), gui_status.axes_labels[0] ) );
-    this.labels.push( Label3D( this.container, new THREE.Vector3(0,s,0), gui_status.axes_labels[1] ) );
-    this.labels.push( Label3D( this.container, new THREE.Vector3(0,0,s), gui_status.axes_labels[2] ) );
+    const s = 0.2;
+    this.labels.push(
+      Label3D(
+        this.container,
+        new THREE.Vector3(s, 0, 0),
+        gui_status.axes_labels[0]
+      )
+    );
+    this.labels.push(
+      Label3D(
+        this.container,
+        new THREE.Vector3(0, s, 0),
+        gui_status.axes_labels[1]
+      )
+    );
+    this.labels.push(
+      Label3D(
+        this.container,
+        new THREE.Vector3(0, 0, s),
+        gui_status.axes_labels[2]
+      )
+    );
 
     // var planeGeom = new THREE.PlaneBufferGeometry(10, 5, 10, 5);
     // console.log("planegeom", planeGeom);
@@ -429,277 +454,292 @@ export class Scene extends WebGLScene {
 
     // const grid = new THREE.GridHelper( 400, 40, 0x0000ff, 0x808080 );
 
-    if(this.colormap_object == null) {
-        this.colormap_object = new ColormapObject(this.render_data, this.uniforms, this.container, this.gui_status);
+    if (this.colormap_object == null) {
+      this.colormap_object = new ColormapObject(
+        this.render_data,
+        this.uniforms,
+        this.container,
+        this.gui_status
+      );
 
-        this.colormap_object.updateTexture(gui_status);
+      this.colormap_object.updateTexture(gui_status);
     }
 
     uniforms.n_segments = new THREE.Uniform(5);
-    if(render_data.edges.length)
-    {
+    if (render_data.edges.length) {
       this.edges_object = new ThickEdgesObject(render_data, uniforms);
       this.pivot.add(this.edges_object);
-      gui.add(gui_status, "line_thickness", 1,20,1).onChange(animate);
-      gui.add(gui_status, "edges").onChange(animate);
+      gui.add(gui_status, 'line_thickness', 1, 20, 1).onChange(animate);
+      gui.add(gui_status, 'edges').onChange(animate);
     }
 
-    if(this.have_z_deformation || this.have_deformation)
-    {
+    if (this.have_z_deformation || this.have_deformation) {
       this.gui_status_default.deformation = render_data.deformation ? 1.0 : 0.0;
       gui_status.deformation = this.gui_status_default.deformation;
-      gui.add(gui_status, "deformation", 0.0, 1.0, 0.0001).onChange(animate);
-      uniforms.deformation = new THREE.Uniform( gui_status.deformation );
+      gui.add(gui_status, 'deformation', 0.0, 1.0, 0.0001).onChange(animate);
+      uniforms.deformation = new THREE.Uniform(gui_status.deformation);
     }
 
-    if(render_data.is_complex)
-    {
+    if (render_data.is_complex) {
       this.gui_status_default.eval = 5;
       gui_status.eval = 5;
-      this.gui.c_eval = gui.add(gui_status, "eval", {"real": 5,"imag":6,"norm":3}).onChange(animate);
+      this.gui.c_eval = gui
+        .add(gui_status, 'eval', { real: 5, imag: 6, norm: 3 })
+        .onChange(animate);
 
-      let cgui = gui.addFolder("Complex");
-      this.phase_controller = cgui.add(gui_status.Complex, "phase", 0, 2*Math.PI, 0.001).onChange(animate);
-      cgui.add(gui_status.Complex, "animate").onChange(()=> {this.last_frame_time = new Date().getTime(); this.animate() });
-      cgui.add(gui_status.Complex, "speed", 0.0, 10, 0.0001).onChange(animate);
-      uniforms.complex_scale = new THREE.Uniform( new THREE.Vector2(1, 0) );
-    }
-    else if(render_data.funcdim==2)
-    {
-        gui_status.eval = 3;
-        this.gui.c_eval = gui.add(gui_status, "eval", {"0": 0,"1":1,"norm":3}).onChange(animate);
-    }
-    else if(render_data.funcdim==3)
-    {
-        gui_status.eval = 3;
-        this.gui.c_eval = gui.add(gui_status, "eval", {"0": 0,"1":1,"2":2,"norm":3}).onChange(animate);
+      const cgui = gui.addFolder('Complex');
+      this.phase_controller = cgui
+        .add(gui_status.Complex, 'phase', 0, 2 * Math.PI, 0.001)
+        .onChange(animate);
+      cgui.add(gui_status.Complex, 'animate').onChange(() => {
+        this.last_frame_time = new Date().getTime();
+        this.animate();
+      });
+      cgui.add(gui_status.Complex, 'speed', 0.0, 10, 0.0001).onChange(animate);
+      uniforms.complex_scale = new THREE.Uniform(new THREE.Vector2(1, 0));
+    } else if (render_data.funcdim == 2) {
+      gui_status.eval = 3;
+      this.gui.c_eval = gui
+        .add(gui_status, 'eval', { '0': 0, '1': 1, norm: 3 })
+        .onChange(animate);
+    } else if (render_data.funcdim == 3) {
+      gui_status.eval = 3;
+      this.gui.c_eval = gui
+        .add(gui_status, 'eval', { '0': 0, '1': 1, '2': 2, norm: 3 })
+        .onChange(animate);
     }
 
-    if(this.gui.c_eval)
-    {
-      if(render_data.eval != undefined)
-      {
+    if (this.gui.c_eval) {
+      if (render_data.eval != undefined) {
         this.gui_status_default.eval = render_data.eval;
         this.gui.c_eval.setValue(render_data.eval);
       }
-      this.gui.c_eval.onChange(()=> {
-        if(gui_status.autoscale)
-          this.gui.updateColormapToAutoscale();
+      this.gui.c_eval.onChange(() => {
+        if (gui_status.autoscale) this.gui.updateColormapToAutoscale();
       });
     }
 
+    if (render_data.mesh_dim == 3) {
+      const gui_clipping = gui.addFolder('Clipping');
+      if (render_data.draw_vol) {
+        if (render_data.clipping_function != undefined) {
+          this.gui_status_default.Clipping.function =
+            render_data.clipping_function;
+          gui_status.Clipping.function = render_data.clipping_function;
+        }
 
-    if(render_data.mesh_dim == 3)
-    {
-      let gui_clipping = gui.addFolder("Clipping");
-      if(render_data.draw_vol)
-      {
-        if(render_data.clipping_function != undefined)
-          {
-              this.gui_status_default.Clipping.function = render_data.clipping_function;
-              gui_status.Clipping.function = render_data.clipping_function;
-          }
-
-        this.clipping_function_object = new ClippingFunctionObject(render_data, uniforms);
+        this.clipping_function_object = new ClippingFunctionObject(
+          render_data,
+          uniforms
+        );
         this.pivot.add(this.clipping_function_object);
-        gui_clipping.add(gui_status.Clipping, "function").onChange(animate);
+        gui_clipping.add(gui_status.Clipping, 'function').onChange(animate);
       }
 
-      if(render_data.clipping)
-        {
-            this.gui_status_default.Clipping.enable = true;
-            gui_status.Clipping.enable = true;
-            if(render_data.clipping_x != undefined)
-            {
-                this.gui_status_default.Clipping.x = render_data.clipping_x;
-                gui_status.Clipping.x = render_data.clipping_x;
-            }
-            if(render_data.clipping_y != undefined)
-            {
-                this.gui_status_default.Clipping.y = render_data.clipping_y;
-                gui_status.Clipping.y = render_data.clipping_y;
-            }
-            if(render_data.clipping_z != undefined)
-            {
-                this.gui_status_default.Clipping.z = render_data.clipping_z;
-                gui_status.Clipping.z = render_data.clipping_z;
-            }
-            if(render_data.clipping_dist != undefined)
-            {
-                this.gui_status_default.Clipping.dist = render_data.clipping_dist;
-                gui_status.Clipping.dist = render_data.clipping_dist;
-            }
+      if (render_data.clipping) {
+        this.gui_status_default.Clipping.enable = true;
+        gui_status.Clipping.enable = true;
+        if (render_data.clipping_x != undefined) {
+          this.gui_status_default.Clipping.x = render_data.clipping_x;
+          gui_status.Clipping.x = render_data.clipping_x;
         }
-        else
-            console.log("render data not clipping found!!!");
+        if (render_data.clipping_y != undefined) {
+          this.gui_status_default.Clipping.y = render_data.clipping_y;
+          gui_status.Clipping.y = render_data.clipping_y;
+        }
+        if (render_data.clipping_z != undefined) {
+          this.gui_status_default.Clipping.z = render_data.clipping_z;
+          gui_status.Clipping.z = render_data.clipping_z;
+        }
+        if (render_data.clipping_dist != undefined) {
+          this.gui_status_default.Clipping.dist = render_data.clipping_dist;
+          gui_status.Clipping.dist = render_data.clipping_dist;
+        }
+      } else console.log('render data not clipping found!!!');
 
-      gui_clipping.add(gui_status.Clipping, "enable").onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "x", -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "y", -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "z", -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, "dist", -1.2*this.mesh_radius, 1.2*this.mesh_radius).onChange(animate);
+      gui_clipping.add(gui_status.Clipping, 'enable').onChange(animate);
+      gui_clipping.add(gui_status.Clipping, 'x', -1.0, 1.0).onChange(animate);
+      gui_clipping.add(gui_status.Clipping, 'y', -1.0, 1.0).onChange(animate);
+      gui_clipping.add(gui_status.Clipping, 'z', -1.0, 1.0).onChange(animate);
+      gui_clipping
+        .add(
+          gui_status.Clipping,
+          'dist',
+          -1.2 * this.mesh_radius,
+          1.2 * this.mesh_radius
+        )
+        .onChange(animate);
     }
 
-    if(render_data.show_wireframe && render_data.Bezier_points.length>0)
-    {
+    if (render_data.show_wireframe && render_data.Bezier_points.length > 0) {
       this.wireframe_object = new WireframeObject(render_data, uniforms);
       this.pivot.add(this.wireframe_object);
-      gui.add(gui_status, "subdivision", 1,20,1).onChange(animate);
-      gui.add(gui_status, "mesh").onChange(animate);
+      gui.add(gui_status, 'subdivision', 1, 20, 1).onChange(animate);
+      gui.add(gui_status, 'mesh').onChange(animate);
     }
 
-    if(render_data.show_mesh)
-    {
+    if (render_data.show_mesh) {
       this.mesh_object = new MeshFunctionObject(render_data, uniforms);
-      this.pivot.add( this.mesh_object );
-      gui.add(gui_status, "elements").onChange(animate);
+      this.pivot.add(this.mesh_object);
+      gui.add(gui_status, 'elements').onChange(animate);
     }
 
-    if(render_data.objects) {
+    if (render_data.objects) {
       gui_status.Objects = {};
-      let gui_objects = gui.addFolder("Objects");
+      const gui_objects = gui.addFolder('Objects');
       const objects = render_data.objects;
-      for (let i=0; i<objects.length; i++) {
-          // console.log("object", objects[i].type);
-          if(objects[i].type === 'text'){
-              const p = objects[i].position;
-              this.render_objects.push( null );
-              // console.log("label3d", p, p[0], p[1], p[2], objects[i].text);
-              this.labels.push( Label3D( this.container, new THREE.Vector3(p[0],p[1],p[2]), objects[i].text ) );
+      for (let i = 0; i < objects.length; i++) {
+        // console.log("object", objects[i].type);
+        if (objects[i].type === 'text') {
+          const p = objects[i].position;
+          this.render_objects.push(null);
+          // console.log("label3d", p, p[0], p[1], p[2], objects[i].text);
+          this.labels.push(
+            Label3D(
+              this.container,
+              new THREE.Vector3(p[0], p[1], p[2]),
+              objects[i].text
+            )
+          );
+        } else {
+          const obj = makeRenderObject(objects[i], uniforms);
+          this.render_objects.push(obj);
+          this.pivot.add(obj);
+          const name = objects[i].name;
+          if (!(name in gui_status.Objects)) {
+            gui_status.Objects[name] = true;
+            gui_objects.add(gui_status.Objects, name).onChange(animate);
           }
-          else {
-              const obj = makeRenderObject(objects[i], uniforms);
-              this.render_objects.push( obj );
-              this.pivot.add( obj );
-              const name = objects[i].name;
-              if(!(name in gui_status.Objects)) {
-                  gui_status.Objects[name] = true;
-                  gui_objects.add(gui_status.Objects, name).onChange(animate);
-              }
-          }
+        }
       }
     }
 
-    let draw_vectors = render_data.funcdim>1 && !render_data.is_complex;
-    draw_vectors = draw_vectors && (render_data.draw_surf && render_data.mesh_dim==2 || render_data.draw_vol && render_data.mesh_dim==3);
-    if(draw_vectors)
-    {
-      if(render_data.vectors)
-        {
-            this.gui_status_default.Vectors.show = true;
-            gui_status.Vectors.show = true;
-            if(render_data.vectors_grid_size)
-            {
-                this.gui_status_default.Vectors.grid_size = render_data.vectors_grid_size;
-                gui_status.Vectors.grid_size = render_data.vectors_grid_size;
-            }
-            if(render_data.vectors_offset)
-            {
-                this.gui_status_default.Vectors.offset = render_data.vectors_offset;
-                gui_status.Vectors.offset = render_data.vectors_offset;
-            }
+    let draw_vectors = render_data.funcdim > 1 && !render_data.is_complex;
+    draw_vectors =
+      draw_vectors &&
+      ((render_data.draw_surf && render_data.mesh_dim == 2) ||
+        (render_data.draw_vol && render_data.mesh_dim == 3));
+    if (draw_vectors) {
+      if (render_data.vectors) {
+        this.gui_status_default.Vectors.show = true;
+        gui_status.Vectors.show = true;
+        if (render_data.vectors_grid_size) {
+          this.gui_status_default.Vectors.grid_size =
+            render_data.vectors_grid_size;
+          gui_status.Vectors.grid_size = render_data.vectors_grid_size;
         }
+        if (render_data.vectors_offset) {
+          this.gui_status_default.Vectors.offset = render_data.vectors_offset;
+          gui_status.Vectors.offset = render_data.vectors_offset;
+        }
+      }
 
-      let gui_vec = gui.addFolder("Vectors");
-      gui_vec.add(gui_status.Vectors, "show").onChange(animate);
-      gui_vec.add(gui_status.Vectors, "grid_size", 1, 100, 1).onChange(()=>this.updateGridsize());
-      gui_vec.add(gui_status.Vectors, "offset", -1.0, 1.0, 0.001).onChange(animate);
+      const gui_vec = gui.addFolder('Vectors');
+      gui_vec.add(gui_status.Vectors, 'show').onChange(animate);
+      gui_vec
+        .add(gui_status.Vectors, 'grid_size', 1, 100, 1)
+        .onChange(() => this.updateGridsize());
+      gui_vec
+        .add(gui_status.Vectors, 'offset', -1.0, 1.0, 0.001)
+        .onChange(animate);
 
-
-      if(render_data.mesh_dim==2)
+      if (render_data.mesh_dim == 2)
         this.buffer_object = this.mesh_object.clone();
-      else
-        this.buffer_object = this.clipping_function_object.clone();
+      else this.buffer_object = this.clipping_function_object.clone();
 
       this.buffer_scene.add(this.buffer_object);
 
-      uniforms.clipping_plane_c = new THREE.Uniform( new THREE.Vector3() );
-      uniforms.clipping_plane_t1 = new THREE.Uniform( new THREE.Vector3() );
-      uniforms.clipping_plane_t2 = new THREE.Uniform( new THREE.Vector3() );
-      uniforms.vectors_offset = new THREE.Uniform( gui_status.Vectors.offset );
-      uniforms.grid_size = new THREE.Uniform( gui_status.Vectors.grid_size );
+      uniforms.clipping_plane_c = new THREE.Uniform(new THREE.Vector3());
+      uniforms.clipping_plane_t1 = new THREE.Uniform(new THREE.Vector3());
+      uniforms.clipping_plane_t2 = new THREE.Uniform(new THREE.Vector3());
+      uniforms.vectors_offset = new THREE.Uniform(gui_status.Vectors.offset);
+      uniforms.grid_size = new THREE.Uniform(gui_status.Vectors.grid_size);
 
-      this.clipping_vectors_object = this.createClippingVectors(render_data);
+      this.clipping_vectors_object = this.createClippingVectors();
       this.pivot.add(this.clipping_vectors_object);
       this.updateGridsize();
     }
 
-    if(this.mesh_only)
-    {
-        this.gui_status_default.colormap_min = -0.5;
-        this.gui_status_default.colormap_max = render_data.mesh_regions_2d-0.5;
-        gui_status.colormap_min = -0.5;
-        gui_status.colormap_max = render_data.mesh_regions_2d-0.5;
-        // this.setSelectedFaces();
+    if (this.mesh_only) {
+      this.gui_status_default.colormap_min = -0.5;
+      this.gui_status_default.colormap_max = render_data.mesh_regions_2d - 0.5;
+      gui_status.colormap_min = -0.5;
+      gui_status.colormap_max = render_data.mesh_regions_2d - 0.5;
+      // this.setSelectedFaces();
     }
     uniforms.colormap_min.value = gui_status.colormap_min;
     uniforms.colormap_max.value = gui_status.colormap_max;
 
-    if(render_data.multidim_data)
-    {
+    if (render_data.multidim_data) {
       const md = render_data.multidim_data.length;
 
-      if(render_data.multidim_interpolate)
-      {
-        if(render_data.multidim_animate)
-        {
+      if (render_data.multidim_interpolate) {
+        if (render_data.multidim_animate) {
           this.gui_status_default.Multidim.animate = true;
           gui_status.Multidim.animate = true;
         }
 
-        let gui_md = gui.addFolder("Multidim");
-        this.multidim_controller = gui_md.add(gui_status.Multidim, "t", 0, md, 0.01).onChange( () => 
-          {
-            let s = gui_status.Multidim.t;
+        const gui_md = gui.addFolder('Multidim');
+        this.multidim_controller = gui_md
+          .add(gui_status.Multidim, 't', 0, md, 0.01)
+          .onChange(() => {
+            const s = gui_status.Multidim.t;
             const n = Math.floor(s);
             const t = s - n;
-            if(n==0)
-              this.interpolateRenderData(this.render_data,this.render_data.multidim_data[0], t);
-            else if(s==md)
-              this.setRenderData(this.render_data.multidim_data[md-1]);
+            if (n == 0)
+              this.interpolateRenderData(
+                this.render_data,
+                this.render_data.multidim_data[0],
+                t
+              );
+            else if (s == md)
+              this.setRenderData(this.render_data.multidim_data[md - 1]);
             else
-              this.interpolateRenderData(this.render_data.multidim_data[n-1],this.render_data.multidim_data[n], t);
-
+              this.interpolateRenderData(
+                this.render_data.multidim_data[n - 1],
+                this.render_data.multidim_data[n],
+                t
+              );
           });
-        gui_md.add(gui_status.Multidim, "animate").onChange(()=> {this.last_frame_time = new Date().getTime(); this.animate() });
-        gui_md.add(gui_status.Multidim, "speed", 0.0, 10, 0.001).onChange(animate);
-      }
-      else
-      {
-        gui.add(gui_status.Multidim, "multidim", 0, md, 1).onChange( () => 
-          {
-            const n = gui_status.Multidim.multidim;
-            if(n==0)
-              this.setRenderData(this.render_data);
-            else
-              this.setRenderData(this.render_data.multidim_data[n-1]);
-          });
+        gui_md.add(gui_status.Multidim, 'animate').onChange(() => {
+          this.last_frame_time = new Date().getTime();
+          this.animate();
+        });
+        gui_md
+          .add(gui_status.Multidim, 'speed', 0.0, 10, 0.001)
+          .onChange(animate);
+      } else {
+        gui.add(gui_status.Multidim, 'multidim', 0, md, 1).onChange(() => {
+          const n = gui_status.Multidim.multidim;
+          if (n == 0) this.setRenderData(this.render_data);
+          else this.setRenderData(this.render_data.multidim_data[n - 1]);
+        });
       }
     }
 
-    let gui_light = gui.addFolder("Light");
-    gui_light.add(gui_status.Light, "ambient", 0.0, 1.0).onChange(animate);
-    gui_light.add(gui_status.Light, "diffuse", 0.0, 1.0).onChange(animate);
-    gui_light.add(gui_status.Light, "shininess", 0.0, 100.0).onChange(animate);
-    gui_light.add(gui_status.Light, "specularity", 0.0, 1.0).onChange(animate);
+    const gui_light = gui.addFolder('Light');
+    gui_light.add(gui_status.Light, 'ambient', 0.0, 1.0).onChange(animate);
+    gui_light.add(gui_status.Light, 'diffuse', 0.0, 1.0).onChange(animate);
+    gui_light.add(gui_status.Light, 'shininess', 0.0, 100.0).onChange(animate);
+    gui_light.add(gui_status.Light, 'specularity', 0.0, 1.0).onChange(animate);
 
-    let gui_misc = gui.addFolder("Misc");
+    const gui_misc = gui.addFolder('Misc');
     //   gui_misc.add(gui_status.Misc, "stats", {"none":-1, "FPS":0, "ms":1, "memory":2}).onChange(function(show_fps) {
     //       stats.showPanel( parseInt(show_fps) );
     //   });
-    let gui_functions = this.gui.gui_functions;
-    gui_functions['reset settings'] = () =>{
+    const gui_functions = this.gui.gui_functions;
+    gui_functions['reset settings'] = () => {
       this.setGuiSettings(this.gui_status_default);
     };
     gui_functions['store settings'] = () => {
-      document.cookie = "gui_status="+btoa(JSON.stringify(gui_status));
+      document.cookie = 'gui_status=' + btoa(JSON.stringify(gui_status));
     };
-    gui_functions['load settings'] = () =>{
-      var name = "gui_status="
-      var decodedCookie = decodeURIComponent(document.cookie);
-      var ca = decodedCookie.split(';');
-      for(var i = 0; i <ca.length; i++) {
-        var c = ca[i];
+    gui_functions['load settings'] = () => {
+      const name = 'gui_status=';
+      const decodedCookie = decodeURIComponent(document.cookie);
+      const ca = decodedCookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
         while (c.charAt(0) == ' ') {
           c = c.substring(1);
         }
@@ -709,90 +749,87 @@ export class Scene extends WebGLScene {
         }
       }
     };
-    gui_misc.add(gui_functions, "reset settings");
-    gui_misc.add(gui_functions, "store settings");
-    gui_misc.add(gui_functions, "load settings");
+    gui_misc.add(gui_functions, 'reset settings');
+    gui_misc.add(gui_functions, 'store settings');
+    gui_misc.add(gui_functions, 'load settings');
 
-    gui_misc.add(gui_status.Misc, "reduce_subdivision");
+    gui_misc.add(gui_status.Misc, 'reduce_subdivision');
 
-    if(this.colormap_object)
-      gui_misc.add(gui_status.Misc, "colormap").onChange(animate);
+    if (this.colormap_object)
+      gui_misc.add(gui_status.Misc, 'colormap').onChange(animate);
 
-    gui_misc.add(gui_status.Misc, "axes").onChange(animate);
-    gui_misc.add(gui_status.Misc, "version").onChange(value => {
-      this.version_object.style.display = value ? "block" : "none";
+    gui_misc.add(gui_status.Misc, 'axes').onChange(animate);
+    gui_misc.add(gui_status.Misc, 'version').onChange((value) => {
+      this.version_object.style.display = value ? 'block' : 'none';
     });
 
-    gui_functions['fullscreen'] = () =>{
+    gui_functions['fullscreen'] = () => {
       this.toggleFullscreen;
     };
 
-    gui.add(gui_functions, "fullscreen");
+    gui.add(gui_functions, 'fullscreen');
 
-    gui_functions['reset'] = ()=> {
+    gui_functions['reset'] = () => {
       this.controls.reset();
     };
-    gui.add(gui_functions, "reset").onChange(animate);
+    gui.add(gui_functions, 'reset').onChange(animate);
 
-    gui_functions['update center'] = ()=> {
+    gui_functions['update center'] = () => {
       this.controls.updateCenter();
     };
-    gui.add(gui_functions, "update center").onChange(animate);
+    gui.add(gui_functions, 'update center').onChange(animate);
 
-    this.scene.add( this.pivot );
+    this.scene.add(this.pivot);
 
-    this.controls = new CameraControls(this, this.renderer.domElement );
+    this.controls = new CameraControls(this, this.renderer.domElement);
     this.controls.addEventListener('change', animate);
 
     this.updateRenderData(render_data);
-    setTimeout(()=> this.onResize(), 0);
-    if(render_data.gui_settings)
-        this.setGuiSettings(render_data.gui_settings);
-    if(render_data.settings)
-        this.setGuiSettings(render_data.settings);
+    setTimeout(() => this.onResize(), 0);
+    if (render_data.gui_settings) this.setGuiSettings(render_data.gui_settings);
+    if (render_data.settings) this.setGuiSettings(render_data.settings);
 
-    console.log("Scene init done", this);
-    if(render_data.on_init) {
-      var on_init = Function("scene", "render_data", render_data.on_init);
+    console.log('Scene init done', this);
+    if (render_data.on_init) {
+      const on_init = Function('scene', 'render_data', render_data.on_init);
       on_init(this, render_data);
     }
-    this.on("afterrender", ()=>this.controls.update());
+    this.on('afterrender', () => this.controls.update());
     this.animate();
     llog.release();
   }
 
-  init(element, render_data, webgl_args = {})
-  {
+  init(element, render_data, webgl_args = {}) {
     this.initCanvas(element, webgl_args);
     this.initRenderData(render_data);
   }
 
-
-  createClippingVectors(data)
-  {
-    var material = new THREE.RawShaderMaterial({
-      vertexShader: getShader( 'vector_function.vert' ),
-      fragmentShader: getShader( 'function.frag', {NO_CLIPPING: 1, SIDE_LIGHTS: 1}, this.render_data.user_eval_function),
+  createClippingVectors() {
+    const material = new THREE.RawShaderMaterial({
+      vertexShader: getShader('vector_function.vert'),
+      fragmentShader: getShader(
+        'function.frag',
+        { NO_CLIPPING: 1, SIDE_LIGHTS: 1 },
+        this.render_data.user_eval_function
+      ),
       side: THREE.DoubleSide,
-      uniforms: this.uniforms
+      uniforms: this.uniforms,
     });
 
-
     const geo = new THREE.InstancedBufferGeometry();
-    const cone = new THREE.ConeGeometry(0.5, 1, 10)
-    geo.setIndex( cone.getIndex() );
-    geo.setAttribute( 'position', cone.getAttribute('position') );
-    geo.setAttribute( 'normal', cone.getAttribute('normal') );
-    geo.setAttribute( 'uv', cone.getAttribute('uv') );
+    const cone = new THREE.ConeGeometry(0.5, 1, 10);
+    geo.setIndex(cone.getIndex());
+    geo.setAttribute('position', cone.getAttribute('position'));
+    geo.setAttribute('normal', cone.getAttribute('normal'));
+    geo.setAttribute('uv', cone.getAttribute('uv'));
 
-    var mesh = new THREE.Mesh(geo, material);
+    const mesh = new THREE.Mesh(geo, material);
     mesh.frustumCulled = false;
     return mesh;
   }
 
   // called on scene.Redraw() from Python
-  updateRenderData(render_data)
-  {
+  updateRenderData(render_data) {
     this.render_data = render_data;
     this.setRenderData(render_data);
     // this.grid = Grid3D(this.container, this.wireframe_object.geometry.boundingSphere);
@@ -800,40 +837,38 @@ export class Scene extends WebGLScene {
     // this.grid.visible = this.gui_status.show_grid;
   }
 
-  setRenderData(render_data)
-  {
-    if(this.edges_object != null)
-        this.edges_object.updateRenderData(render_data);
+  setRenderData(render_data) {
+    if (this.edges_object != null)
+      this.edges_object.updateRenderData(render_data);
 
-    if(this.wireframe_object != null)
-        this.wireframe_object.updateRenderData(render_data);
+    if (this.wireframe_object != null)
+      this.wireframe_object.updateRenderData(render_data);
 
-    if(this.mesh_object != null)
-        this.mesh_object.updateRenderData(render_data);
+    if (this.mesh_object != null)
+      this.mesh_object.updateRenderData(render_data);
 
-    for (let i=0; i<this.render_objects.length; i++)
-        if(this.render_objects[i] != null)
-          this.render_objects[i].updateRenderData( render_data.objects[i] );
+    for (let i = 0; i < this.render_objects.length; i++)
+      if (this.render_objects[i] != null)
+        this.render_objects[i].updateRenderData(render_data.objects[i]);
 
-    if(this.clipping_function_object != null)
-        this.clipping_function_object.updateRenderData(render_data);
+    if (this.clipping_function_object != null)
+      this.clipping_function_object.updateRenderData(render_data);
 
-    if(render_data.draw_surf || render_data.draw_vol)
-    {
+    if (render_data.draw_surf || render_data.draw_vol) {
       const cmin = render_data.funcmin;
       const cmax = render_data.funcmax;
       this.gui_status_default.colormap_min = cmin;
       this.gui_status_default.colormap_max = cmax;
 
-      if(this.gui_status.autoscale)
-      {
-        if(this.gui_status.eval == 3) // norm of vector-valued function
-        {
+      if (this.gui_status.autoscale) {
+        if (this.gui_status.eval == 3) {
+          // norm of vector-valued function
           this.gui_status.colormap_min = 0;
-          this.gui_status.colormap_max = Math.max(Math.abs(cmin), Math.abs(cmax));
-        }
-        else
-        {
+          this.gui_status.colormap_max = Math.max(
+            Math.abs(cmin),
+            Math.abs(cmax)
+          );
+        } else {
           this.gui_status.colormap_min = cmin;
           this.gui_status.colormap_max = cmax;
         }
@@ -843,62 +878,50 @@ export class Scene extends WebGLScene {
         this.colormap_object.update(this.gui_status);
       }
 
-      if(cmax>cmin)
-        this.gui.setStepSize(cmin, cmax);
+      if (cmax > cmin) this.gui.setStepSize(cmin, cmax);
     }
 
     this.animate();
   }
 
-  interpolateRenderData(rd, rd2, t)
-  {
-    const t1 = 1.0-t;
-    const mix = (a,b)=> t1*a + t*b;
-    const mixB64 = (a,b)=> {
-      let d1 = readB64(a);
-      let d2 = readB64(b);
+  interpolateRenderData(rd, rd2, t) {
+    const t1 = 1.0 - t;
+    const mix = (a, b) => t1 * a + t * b;
 
-      for (let i=0; i<d1.length; i++)
-        d1[i] = mix(d1[i],d2[i]);
+    if (this.edges_object != null)
+      this.edges_object.updateRenderData(rd, rd2, t);
 
-      return d1;
-    };
+    if (this.wireframe_object != null)
+      this.wireframe_object.updateRenderData(rd, rd2, t);
 
-    if(this.edges_object != null)
-        this.edges_object.updateRenderData( rd, rd2, t );
+    if (this.mesh_object != null) this.mesh_object.updateRenderData(rd, rd2, t);
 
-    if(this.wireframe_object != null)
-        this.wireframe_object.updateRenderData( rd, rd2, t );
+    if (rd2.objects)
+      for (let i = 0; i < this.render_objects.length; i++)
+        if (this.render_objects[i] != null)
+          this.render_objects[i].updateRenderData(
+            rd.objects[i],
+            rd2.objects[i],
+            t
+          );
 
-    if(this.mesh_object != null)
-        this.mesh_object.updateRenderData(rd, rd2, t);
+    if (this.clipping_function_object != null)
+      this.clipping_function_object.updateRenderData(rd, rd2, t);
 
-    if(rd2.objects)
-        for (let i=0; i<this.render_objects.length; i++)
-          if(this.render_objects[i] != null)
-            this.render_objects[i].updateRenderData( rd.objects[i], rd2.objects[i], t );
-
-    if(this.clipping_function_object != null)
-        this.clipping_function_object.updateRenderData(rd, rd2, t);
-
-
-    if(rd.draw_surf || rd.draw_vol)
-    {
+    if (rd.draw_surf || rd.draw_vol) {
       const cmin = mix(rd.funcmin, rd2.funcmin);
       const cmax = mix(rd.funcmax, rd2.funcmax);
       this.gui_status_default.colormap_min = cmin;
       this.gui_status_default.colormap_max = cmax;
 
-      if(this.gui_status.autoscale)
-      {
+      if (this.gui_status.autoscale) {
         this.gui_status.colormap_min = cmin;
         this.gui_status.colormap_max = cmax;
         this.gui.c_cmin.updateDisplay();
         this.gui.c_cmax.updateDisplay();
       }
 
-      if(cmax>cmin)
-        this.gui.setStepSize(cmin, cmax);
+      if (cmax > cmin) this.gui.setStepSize(cmin, cmax);
     }
 
     this.animate();
@@ -911,191 +934,217 @@ export class Scene extends WebGLScene {
     }
     if (position != null) {
       const n = 101;
-      const size = n * n;
-      const data = new Uint8Array(4*n*n);
+      const data = new Uint8Array(4 * n * n);
 
-      for(var i=0; i<n; i++)
-        for(var j=0; j<n; j++)
-        {
-          const dist = n*n/4-((i-n/2)*(i-n/2)+(j-n/2)*(j-n/2));
-          if(dist>0.0)
-          {
-            for(var k=0; k<3; k++)
-              data[4*(i*n+j)+k] = 128;
-            data[4*(i*n+j)+3] = 255;
-          }
-          else
-          {
-            for(var k=0; k<3; k++)
-              data[4*(i*n+j)+k] = 0;
+      for (let i = 0; i < n; i++)
+        for (let j = 0; j < n; j++) {
+          const dist =
+            (n * n) / 4 -
+            ((i - n / 2) * (i - n / 2) + (j - n / 2) * (j - n / 2));
+          if (dist > 0.0) {
+            for (let k = 0; k < 3; k++) data[4 * (i * n + j) + k] = 128;
+            data[4 * (i * n + j) + 3] = 255;
+          } else {
+            for (let k = 0; k < 3; k++) data[4 * (i * n + j) + k] = 0;
           }
         }
 
-      let texture = new THREE.DataTexture( data, n, n, THREE.RGBAFormat);
+      const texture = new THREE.DataTexture(data, n, n, THREE.RGBAFormat);
 
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearFilter;
       texture.needsUpdate = true;
 
       // disable depthTest and set renderOrder to make the tag always visible
-      let material = new THREE.SpriteMaterial( { map: texture, sizeAttenuation: false, color: 0xffffff, depthTest: false } );
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        sizeAttenuation: false,
+        color: 0xffffff,
+        depthTest: false,
+      });
 
-      this.center_tag = new THREE.Sprite( material );
-      const s = 0.01/this.controls.scale;
+      this.center_tag = new THREE.Sprite(material);
+      const s = 0.01 / this.controls.scale;
 
-      this.center_tag.scale.set(s,s,s);
+      this.center_tag.scale.set(s, s, s);
       this.center_tag.position.copy(position);
       this.center_tag.renderOrder = 1;
       this.pivot.add(this.center_tag);
     }
   }
 
-  async getMeshIndex(x,y) {
+  async getMeshIndex(x, y) {
     await this.animate(true);
     let index = -1;
     let dim = -1;
-    if(this.mesh_only) {
-        const pixels = new Float32Array(4);
-        const render_target = new THREE.WebGLRenderTarget( 1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType, format: THREE.RGBAFormat });
-        const h = this.renderer.domElement.height;
-        var rect = this.canvas.getBoundingClientRect();
+    if (this.mesh_only) {
+      const pixels = new Float32Array(4);
+      const render_target = new THREE.WebGLRenderTarget(1, 1, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.NearestFilter,
+        type: THREE.FloatType,
+        format: THREE.RGBAFormat,
+      });
+      const h = this.renderer.domElement.height;
 
-        // render face index to texture (for mouse selection)
-        const function_mode = this.uniforms.function_mode.value;
-        this.uniforms.function_mode.value = 7;
-        // render again to get function value (face index for mesh rendering)
-        this.camera.setViewOffset( this.renderer.domElement.width, this.renderer.domElement.height,
-          x * window.devicePixelRatio | 0, y * window.devicePixelRatio | 0, 1, 1 );
-        this.renderer.setRenderTarget(render_target);
-        this.renderer.setClearColor( new THREE.Color(-1.0,-1.0,-1.0));
-        this.renderer.clear(true, true, true);
-        this.uniforms.line_thickness.value = this.gui_status.line_thickness*4;
-        this.renderer.render( this.pivot, this.camera );
-        this.uniforms.line_thickness.value = this.gui_status.line_thickness/h;
-        const gl = this.context;
-        this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
-        // console.log("pixels", pixels);
-        index = Math.round(pixels[1]);
-        dim = Math.round(pixels[0]);
-        if(index>=0 && dim>0) {
-            // this.uniforms.highlight_selected_face.value = dim;
-            this.uniforms.selected_face.value = index;
-            let name = "";
-            let text = "";
-            if(dim==1)
-            {
-                text = "Edge";
-                if(this.render_data.edge_names && this.render_data.edge_names.length>index)
-                    name = this.render_data.edge_names[index];
-            }
-            else if(dim==2) {
-                text = "Face";
-                if(this.render_data.names && this.render_data.names.length>index)
-                    name = this.render_data.names[index];
-            }
-            if(text!="") {
-                text += ` ${index}`;
-                if(name=="")
-                    name = "(no name)"
-                text += `\n ${name}`;
-                this.tooltip.textContent = text;
-                this.tooltip.style.visibility = "visible";
-                this.tooltip.style.left = `${x}px`;
-                this.tooltip.style.top = `${y+20}px`;
-            }
+      // render face index to texture (for mouse selection)
+      const function_mode = this.uniforms.function_mode.value;
+      this.uniforms.function_mode.value = 7;
+      // render again to get function value (face index for mesh rendering)
+      this.camera.setViewOffset(
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
+        (x * window.devicePixelRatio) | 0,
+        (y * window.devicePixelRatio) | 0,
+        1,
+        1
+      );
+      this.renderer.setRenderTarget(render_target);
+      this.renderer.setClearColor(new THREE.Color(-1.0, -1.0, -1.0));
+      this.renderer.clear(true, true, true);
+      this.uniforms.line_thickness.value = this.gui_status.line_thickness * 4;
+      this.renderer.render(this.pivot, this.camera);
+      this.uniforms.line_thickness.value = this.gui_status.line_thickness / h;
+      const gl = this.context;
+      this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
+      // console.log("pixels", pixels);
+      index = Math.round(pixels[1]);
+      dim = Math.round(pixels[0]);
+      if (index >= 0 && dim > 0) {
+        // this.uniforms.highlight_selected_face.value = dim;
+        this.uniforms.selected_face.value = index;
+        let name = '';
+        let text = '';
+        if (dim == 1) {
+          text = 'Edge';
+          if (
+            this.render_data.edge_names &&
+            this.render_data.edge_names.length > index
+          )
+            name = this.render_data.edge_names[index];
+        } else if (dim == 2) {
+          text = 'Face';
+          if (this.render_data.names && this.render_data.names.length > index)
+            name = this.render_data.names[index];
         }
-        else
-        {
-            this.uniforms.highlight_selected_face.value = false;
-            this.tooltip.style.visibility = "hidden";
+        if (text != '') {
+          text += ` ${index}`;
+          if (name == '') name = '(no name)';
+          text += `\n ${name}`;
+          this.tooltip.textContent = text;
+          this.tooltip.style.visibility = 'visible';
+          this.tooltip.style.left = `${x}px`;
+          this.tooltip.style.top = `${y + 20}px`;
         }
+      } else {
+        this.uniforms.highlight_selected_face.value = false;
+        this.tooltip.style.visibility = 'hidden';
+      }
 
-        this.camera.clearViewOffset();
-        this.uniforms.function_mode.value = function_mode;
+      this.camera.clearViewOffset();
+      this.uniforms.function_mode.value = function_mode;
     }
-    return {dim, index};
+    return { dim, index };
   }
 
-  async getPixelCoordinates (x,y) {
-      await this.animate(true);
+  async getPixelCoordinates(x, y) {
+    await this.animate(true);
 
-      this.uniforms.render_depth.value = true;
-      this.camera.setViewOffset( this.renderer.domElement.width, this.renderer.domElement.height,
-        x * window.devicePixelRatio | 0, y * window.devicePixelRatio | 0, 1, 1 );
-      this.renderer.setRenderTarget(this.render_target);
-      this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));
-      this.renderer.clear(true, true, true);
-      this.renderer.render( this.scene, this.camera );
-      this.uniforms.render_depth.value= false;
+    this.uniforms.render_depth.value = true;
+    this.camera.setViewOffset(
+      this.renderer.domElement.width,
+      this.renderer.domElement.height,
+      (x * window.devicePixelRatio) | 0,
+      (y * window.devicePixelRatio) | 0,
+      1,
+      1
+    );
+    this.renderer.setRenderTarget(this.render_target);
+    this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
+    this.renderer.clear(true, true, true);
+    this.renderer.render(this.scene, this.camera);
+    this.uniforms.render_depth.value = false;
 
-      // console.log("viewport", x * window.devicePixelRatio | 0,y * window.devicePixelRatio | 0 )
-      let pixel_buffer = new Float32Array( 4 );
-      this.context.readPixels(0, 0, 1, 1, this.context.RGBA, this.context.FLOAT, pixel_buffer);
-      this.camera.clearViewOffset();
-      // console.log("pixel buffer", pixel_buffer);
+    // console.log("viewport", x * window.devicePixelRatio | 0,y * window.devicePixelRatio | 0 )
+    const pixel_buffer = new Float32Array(4);
+    this.context.readPixels(
+      0,
+      0,
+      1,
+      1,
+      this.context.RGBA,
+      this.context.FLOAT,
+      pixel_buffer
+    );
+    this.camera.clearViewOffset();
+    // console.log("pixel buffer", pixel_buffer);
 
-      if (pixel_buffer[3]!==1){
-        let p = new THREE.Vector3();
-        for (var i=0; i<3; i++){
-          p.setComponent(i, (pixel_buffer[i]-this.trafo.y)/this.trafo.x);
-        }
-        return p;
+    if (pixel_buffer[3] !== 1) {
+      const p = new THREE.Vector3();
+      for (let i = 0; i < 3; i++) {
+        p.setComponent(i, (pixel_buffer[i] - this.trafo.y) / this.trafo.x);
       }
-      return null;
+      return p;
+    }
+    return null;
   }
 
   render() {
-    let now = new Date().getTime();
-    let frame_time = 0.001*(new Date().getTime() - this.last_frame_time );
+    const now = new Date().getTime();
+    const frame_time = 0.001 * (new Date().getTime() - this.last_frame_time);
 
     this.requestId = 0;
 
-    if(this.widgets_camera === undefined)
-      return; // not fully initialized yet
+    if (this.widgets_camera === undefined) return; // not fully initialized yet
 
     this.handleEvent('beforerender', [this, frame_time]);
 
-    let gui_status = this.gui_status;
-    let uniforms = this.uniforms;
+    const gui_status = this.gui_status;
+    const uniforms = this.uniforms;
 
     const h = this.renderer.domElement.height;
-    uniforms.line_thickness.value = gui_status.line_thickness/h;
+    uniforms.line_thickness.value = gui_status.line_thickness / h;
 
     this.axes_object.visible = gui_status.Misc.axes;
-    for (let i=0; i<3; i++)
-        this.labels[i].el.style.visibility = gui_status.Misc.axes ? "visible" : "hidden";
-    var subdivision = gui_status.subdivision;
-    if(gui_status.Misc.reduce_subdivision && this.controls.mode != null)
-      subdivision = Math.ceil(subdivision/2);
+    for (let i = 0; i < 3; i++)
+      this.labels[i].el.style.visibility = gui_status.Misc.axes
+        ? 'visible'
+        : 'hidden';
 
-    if( this.edges_object != null )
-        this.edges_object.update(gui_status);
+    if (this.edges_object != null) this.edges_object.update(gui_status);
 
-    if( this.wireframe_object != null )
-      this.wireframe_object.update(gui_status);
+    if (this.wireframe_object != null) this.wireframe_object.update(gui_status);
 
-    if( this.mesh_object != null )
-      this.mesh_object.update(gui_status);
+    if (this.mesh_object != null) this.mesh_object.update(gui_status);
 
-    for (let i=0; i<this.render_objects.length; i++)
-    if(this.render_objects[i] != null)
+    for (let i = 0; i < this.render_objects.length; i++)
+      if (this.render_objects[i] != null)
         this.render_objects[i].update(gui_status);
 
-    if( this.colormap_object != null )
-      this.colormap_object.update(gui_status);
+    if (this.colormap_object != null) this.colormap_object.update(gui_status);
 
-    if( this.grid != null ) {
+    if (this.grid != null) {
       this.grid.visible = this.gui_status.show_grid;
-      this.grid.updateLabelPositions( this.container, this.camera, this.pivot.matrix );
+      this.grid.updateLabelPositions(
+        this.container,
+        this.camera,
+        this.pivot.matrix
+      );
     }
 
-    if( this.clipping_function_object != null )
-        this.clipping_function_object.update(gui_status);
+    if (this.clipping_function_object != null)
+      this.clipping_function_object.update(gui_status);
 
-    let three_clipping_plane = this.three_clipping_plane;
-    three_clipping_plane.normal.set(gui_status.Clipping.x, gui_status.Clipping.y, gui_status.Clipping.z);
-      three_clipping_plane.normal.normalize();
-    three_clipping_plane.constant = gui_status.Clipping.dist-three_clipping_plane.normal.dot(this.mesh_center);
+    const three_clipping_plane = this.three_clipping_plane;
+    three_clipping_plane.normal.set(
+      gui_status.Clipping.x,
+      gui_status.Clipping.y,
+      gui_status.Clipping.z
+    );
+    three_clipping_plane.normal.normalize();
+    three_clipping_plane.constant =
+      gui_status.Clipping.dist -
+      three_clipping_plane.normal.dot(this.mesh_center);
 
     // console.log("three_clipping_plane normal and const", three_clipping_plane.normal, three_clipping_plane.constant);
 
@@ -1103,50 +1152,46 @@ export class Scene extends WebGLScene {
       three_clipping_plane.normal.x,
       three_clipping_plane.normal.y,
       three_clipping_plane.normal.z,
-      three_clipping_plane.constant);
+      three_clipping_plane.constant
+    );
     this.renderer.clippingPlanes = [];
 
-    let world_clipping_plane = three_clipping_plane.clone();
+    const world_clipping_plane = three_clipping_plane.clone();
 
     world_clipping_plane.constant = gui_status.Clipping.dist;
-    world_clipping_plane.applyMatrix4( this.pivot.matrix)
+    world_clipping_plane.applyMatrix4(this.pivot.matrix);
 
     uniforms.do_clipping.value = gui_status.Clipping.enable;
 
-    if(this.have_deformation || this.have_z_deformation)
+    if (this.have_deformation || this.have_z_deformation)
       uniforms.deformation.value = gui_status.deformation;
 
-    if(gui_status.Clipping.enable)
+    if (gui_status.Clipping.enable)
       this.renderer.clippingPlanes = [world_clipping_plane];
 
-    if(gui_status.colormap_ncolors)
-    {
+    if (gui_status.colormap_ncolors) {
       uniforms.colormap_min.value = gui_status.colormap_min;
       uniforms.colormap_max.value = gui_status.colormap_max;
     }
 
-    if(this.clipping_vectors_object != null)
-    {
+    if (this.clipping_vectors_object != null) {
       this.clipping_vectors_object.visible = gui_status.Vectors.show;
       uniforms.vectors_offset.value = gui_status.Vectors.offset;
     }
 
-    if(this.is_complex)
-    {
+    if (this.is_complex) {
       uniforms.complex_scale.value.x = Math.cos(-gui_status.Complex.phase);
       uniforms.complex_scale.value.y = Math.sin(-gui_status.Complex.phase);
     }
 
-    if(gui_status.Vectors.show)
-    {
+    if (gui_status.Vectors.show) {
       this.updateClippingPlaneCamera();
       uniforms.function_mode.value = 4;
       this.renderer.setRenderTarget(this.buffer_texture);
-      this.renderer.setClearColor( new THREE.Color(0.0,0.0,0.0) );
+      this.renderer.setClearColor(new THREE.Color(0.0, 0.0, 0.0));
       this.renderer.clear(true, true, true);
       this.renderer.render(this.buffer_scene, this.buffer_camera);
     }
-
 
     uniforms.function_mode.value = parseInt(gui_status.eval);
     uniforms.light_mat.value.x = gui_status.Light.ambient;
@@ -1155,37 +1200,34 @@ export class Scene extends WebGLScene {
     uniforms.light_mat.value.w = gui_status.Light.specularity;
 
     this.renderer.setRenderTarget(null);
-    this.renderer.setClearColor( new THREE.Color(1.0,1.0,1.0));
+    this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
     this.renderer.clear(true, true, true);
-    this.renderer.render( this.scene, this.camera );
+    this.renderer.render(this.scene, this.camera);
 
     this.renderer.clippingPlanes = [];
 
-    // render after clipping 
-    if(this.center_tag != null){
+    // render after clipping
+    if (this.center_tag != null) {
       this.renderer.render(this.center_tag, this.camera);
     }
 
-    if(this.colormap_object && gui_status.Misc.colormap)
-      this.renderer.render( this.colormap_object, this.widgets_camera );
+    if (this.colormap_object && gui_status.Misc.colormap)
+      this.renderer.render(this.colormap_object, this.widgets_camera);
 
-    if(this.axes_object && gui_status.Misc.axes)
-      this.renderer.render( this.axes_object, this.widgets_camera );
+    if (this.axes_object && gui_status.Misc.axes)
+      this.renderer.render(this.axes_object, this.widgets_camera);
 
-
-    if(gui_status.Complex.animate)
-    {
+    if (gui_status.Complex.animate) {
       gui_status.Complex.phase += frame_time * gui_status.Complex.speed;
-      if(gui_status.Complex.phase>2*Math.PI)
-        gui_status.Complex.phase -= 2*Math.PI;
+      if (gui_status.Complex.phase > 2 * Math.PI)
+        gui_status.Complex.phase -= 2 * Math.PI;
 
       this.phase_controller.updateDisplay();
       this.animate();
     }
-    if(gui_status.Multidim.animate)
-    {
+    if (gui_status.Multidim.animate) {
       gui_status.Multidim.t += frame_time * gui_status.Multidim.speed;
-      if(gui_status.Multidim.t > this.render_data.multidim_data.length)
+      if (gui_status.Multidim.t > this.render_data.multidim_data.length)
         gui_status.Multidim.t = 0.0;
 
       this.multidim_controller.updateDisplay();
@@ -1196,15 +1238,14 @@ export class Scene extends WebGLScene {
     this.handleEvent('afterrender', [this, frame_time]);
   }
 
-  renderToImage()
-    {
-        var img = new Image();
-        var toimage =  () => {
-            img.src = this.renderer.domElement.toDataURL("image/png");
-        };
-        this.on("afterrender", toimage);
-        this.render();
-        this.event_handlers["afterrender"].pop(toimage);
-        return img;
+  renderToImage() {
+    const img = new Image();
+    const toimage = () => {
+      img.src = this.renderer.domElement.toDataURL('image/png');
+    };
+    this.on('afterrender', toimage);
+    this.render();
+    this.event_handlers['afterrender'].pop(toimage);
+    return img;
   }
 }
