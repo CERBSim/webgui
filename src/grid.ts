@@ -23,7 +23,7 @@ function toString(x) {
   return x.toPrecision(2);
 }
 
-// const css = require('./styles.css');
+import './styles.css';
 
 export function Label3D(parent, p, text) {
   /*

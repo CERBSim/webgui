@@ -23,7 +23,7 @@ import { GUI } from './gui';
 import * as THREE from 'three';
 // import Stats from "https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min";
 
-// const css = require('./styles.css');
+import './styles.css';
 
 export { THREE };
 

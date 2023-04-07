@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// const css = require('./styles.css');
+import './styles.css';
 
 function makeSelectedFaceTexture(
   data,
