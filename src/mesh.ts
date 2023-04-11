@@ -142,14 +142,12 @@ export class MeshFunctionObject extends RenderObject {
   }
 }
 
-export class WireframeObject extends THREE.Line {
-  uniforms;
-  data;
+export class WireframeObject extends RenderObject {
   mesh_only: boolean;
-  buffer_geometry: THREE.BufferGeometry;
-  name_: string;
+  geometry: THREE.BufferGeometry;
 
-  constructor(data, global_uniforms) {
+  constructor(data, global_uniforms, path) {
+    super(data, global_uniforms, path);
     const have_deformation = data.mesh_dim == data.funcdim && !data.is_complex;
     const have_z_deformation = data.mesh_dim == 2 && data.funcdim > 0;
     const geo = new THREE.InstancedBufferGeometry();
@@ -172,24 +170,24 @@ export class WireframeObject extends THREE.Line {
       uniforms: uniforms,
     });
 
-    super(geo, wireframe_material);
-    this.uniforms = uniforms;
-    this.buffer_geometry = geo;
-    this.name_ = 'Wireframe';
+    this.three_object = new THREE.Line(geo, wireframe_material);
+    this.geometry = geo;
+    this.name = 'Wireframe';
   }
 
   update(gui_status) {
-    (this as THREE.Mesh).visible = gui_status.mesh;
+    super.update(gui_status);
     if (gui_status.subdivision !== undefined) {
       const sd = gui_status.subdivision;
       this.uniforms.n_segments.value = sd;
-      this.buffer_geometry.setDrawRange(0, sd + 1);
+      this.geometry.setDrawRange(0, sd + 1);
     }
   }
 
   updateRenderData(data, data2, t) {
-    this.data = data;
-    const geo = this.buffer_geometry;
+    this.data = this.extractData(data);
+    data2 = data2 && this.extractData(data2);
+    const geo = this.geometry;
     const pdata = data.Bezier_points;
     const pdata2 = data2 && data2.Bezier_points;
     const do_interpolate = t !== undefined;
@@ -221,22 +219,12 @@ export class WireframeObject extends THREE.Line {
   }
 }
 
-export class ClippingFunctionObject extends THREE.Mesh {
-  uniforms;
-  data;
-  buffer_geometry: THREE.BufferGeometry;
+export class ClippingFunctionObject extends RenderObject {
+  geometry: THREE.BufferGeometry;
 
-  constructor(data, global_uniforms) {
-    if (data === undefined) {
-      // make clone() work
-      super();
-      return;
-    }
-
-    const uniforms = {
-      n_segments: new THREE.Uniform(5),
-      ...global_uniforms,
-    };
+  constructor(data, uniforms, path) {
+    super(data, uniforms, path);
+    this.uniforms.n_segments = new THREE.Uniform(5);
 
     const defines = { ORDER: data.order3d, SKIP_FACE_CHECK: 1, NO_CLIPPING: 1 };
     const material = new THREE.RawShaderMaterial({
@@ -247,7 +235,7 @@ export class ClippingFunctionObject extends THREE.Mesh {
         data.user_eval_function
       ),
       side: THREE.DoubleSide,
-      uniforms: uniforms,
+      uniforms: this.uniforms,
     });
 
     const sd = MAX_SUBDIVISION;
@@ -299,26 +287,24 @@ export class ClippingFunctionObject extends THREE.Mesh {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(vertid, 4));
     geo.setAttribute('vertid', new THREE.Float32BufferAttribute(vertid, 4));
 
-    super(geo, material);
-    (this as THREE.Mesh).name = data.name;
-    this.data = data;
-    this.uniforms = uniforms;
-    this.buffer_geometry = geo;
+    this.three_object = new THREE.Mesh(geo, material);
+    this.name = 'Clipping Plane';
+    this.geometry = geo;
   }
 
   update(gui_status) {
-    (this as THREE.Mesh).visible =
-      gui_status.Clipping.function && gui_status.Clipping.enable;
+    super.update(gui_status);
     if (gui_status.subdivision !== undefined) {
       const sd = gui_status.subdivision;
       this.uniforms.n_segments.value = sd;
-      this.buffer_geometry.setDrawRange(0, 6 * sd * sd * sd);
+      this.geometry.setDrawRange(0, 6 * sd * sd * sd);
     }
   }
 
   updateRenderData(data, data2, t) {
-    this.data = data;
-    const geo = this.buffer_geometry;
+    this.data = this.extractData(data);
+    data2 = data2 && this.extractData(data2);
+    const geo = this.geometry;
     const pdata = data.points3d;
     const pdata2 = data2 && data2.points3d;
     const do_interpolate = t !== undefined;

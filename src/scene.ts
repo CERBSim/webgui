@@ -6,7 +6,7 @@ import {
   unpackIndexedData,
 } from './utils';
 
-import { RenderObject } from './render_object';
+import { RenderObject, extractData } from './render_object';
 
 import {
   MeshFunctionObject,
@@ -34,14 +34,15 @@ import './styles.css';
 
 export { THREE };
 
-function makeRenderObject(obj, i, global_uniforms) {
-  switch (obj[i].type) {
+function makeRenderObject(data, uniforms, path = []) {
+  const type = extractData(data, path).type;
+  switch (type) {
     case 'lines':
-      return new LinesObject(obj, i);
+      return new LinesObject(data, uniforms, path);
     case 'points':
-      return new PointsObject(obj, i);
+      return new PointsObject(data, uniforms, path);
     case 'fieldlines':
-      return new FieldLinesObject(obj, i, global_uniforms);
+      return new FieldLinesObject(data, uniforms, path);
   }
 }
 
@@ -428,7 +429,15 @@ export class Scene extends WebGLScene {
     this.center_tag = null;
 
     const animate = () => this.animate();
-    const gui = new GUI(this.container, render_data, animate);
+    const gui = new GUI(
+      this.container,
+      render_data,
+      animate,
+      {},
+      { Fullscreen: () => this.toggleFullscreen() }
+    );
+    const gui_functions = gui.gui_functions;
+
     this.gui = gui;
     this.gui_status = gui.gui_status;
     const gui_status = this.gui_status;
@@ -486,10 +495,8 @@ export class Scene extends WebGLScene {
 
     uniforms.n_segments = new THREE.Uniform(5);
     if (render_data.edges.length) {
-      this.edges_object = new ThickEdgesObject(render_data, uniforms);
-      this.pivot.add(this.edges_object);
+      this.addRenderObject(new ThickEdgesObject(render_data, uniforms));
       gui.add(gui_status, 'line_thickness', 1, 20, 1).onChange(animate);
-      gui.add(gui_status, 'edges').onChange(animate);
     }
 
     if (this.have_z_deformation || this.have_deformation) {
@@ -541,18 +548,9 @@ export class Scene extends WebGLScene {
     if (render_data.mesh_dim == 3) {
       const gui_clipping = gui.addFolder('Clipping');
       if (render_data.draw_vol) {
-        if (render_data.clipping_function != undefined) {
-          this.gui_status_default.Clipping.function =
-            render_data.clipping_function;
-          gui_status.Clipping.function = render_data.clipping_function;
-        }
-
-        this.clipping_function_object = new ClippingFunctionObject(
-          render_data,
-          uniforms
+        this.addRenderObject(
+          new ClippingFunctionObject(render_data, uniforms, [])
         );
-        this.pivot.add(this.clipping_function_object);
-        gui_clipping.add(gui_status.Clipping, 'function').onChange(animate);
       }
 
       if (render_data.clipping) {
@@ -591,10 +589,10 @@ export class Scene extends WebGLScene {
     }
 
     if (render_data.show_wireframe && render_data.Bezier_points.length > 0) {
-      this.wireframe_object = new WireframeObject(render_data, uniforms);
-      this.pivot.add(this.wireframe_object);
+      this.addRenderObject(new WireframeObject(render_data, uniforms, []));
+      // this.pivot.add(this.wireframe_object);
       gui.add(gui_status, 'subdivision', 1, 20, 1).onChange(animate);
-      gui.add(gui_status, 'mesh').onChange(animate);
+      // gui.add(gui_status, 'mesh').onChange(animate);
     }
 
     if (render_data.show_mesh) {
@@ -617,7 +615,7 @@ export class Scene extends WebGLScene {
             )
           );
         } else {
-          const obj = makeRenderObject(objects, i, uniforms);
+          const obj = makeRenderObject(render_data, uniforms, ['objects', i]);
           this.render_objects.push(obj);
           this.pivot.add(obj);
           const name = objects[i].name;
@@ -676,14 +674,14 @@ export class Scene extends WebGLScene {
     }
 
     if (this.mesh_only) {
-      this.gui_status_default.colormap_min = -0.5;
-      this.gui_status_default.colormap_max = render_data.mesh_regions_2d - 0.5;
-      gui_status.colormap_min = -0.5;
-      gui_status.colormap_max = render_data.mesh_regions_2d - 0.5;
+      this.gui_status_default.Colormap.min = -0.5;
+      this.gui_status_default.Colormap.max = render_data.mesh_regions_2d - 0.5;
+      gui_status.Colormap.min = -0.5;
+      gui_status.Colormap.max = render_data.mesh_regions_2d - 0.5;
       // this.setSelectedFaces();
     }
-    uniforms.colormap_min.value = gui_status.colormap_min;
-    uniforms.colormap_max.value = gui_status.colormap_max;
+    uniforms.colormap_min.value = gui_status.Colormap.min;
+    uniforms.colormap_max.value = gui_status.Colormap.max;
 
     if (render_data.multidim_data) {
       const md = render_data.multidim_data.length;
@@ -742,7 +740,6 @@ export class Scene extends WebGLScene {
     //   gui_misc.add(gui_status.Misc, "stats", {"none":-1, "FPS":0, "ms":1, "memory":2}).onChange(function(show_fps) {
     //       stats.showPanel( parseInt(show_fps) );
     //   });
-    const gui_functions = this.gui.gui_functions;
     gui_functions['reset settings'] = () => {
       this.setGuiSettings(this.gui_status_default);
     };
@@ -777,22 +774,10 @@ export class Scene extends WebGLScene {
     gui_misc.add(gui_status.Misc, 'version').onChange((value) => {
       this.version_object.style.display = value ? 'block' : 'none';
     });
-
-    gui_functions['fullscreen'] = () => {
-      this.toggleFullscreen;
-    };
-
-    gui.add(gui_functions, 'fullscreen');
-
     gui_functions['reset'] = () => {
       this.controls.reset();
     };
     gui.add(gui_functions, 'reset').onChange(animate);
-
-    gui_functions['update center'] = () => {
-      this.controls.updateCenter();
-    };
-    gui.add(gui_functions, 'update center').onChange(animate);
 
     this.scene.add(this.pivot);
 
@@ -871,20 +856,20 @@ export class Scene extends WebGLScene {
     if (render_data.draw_surf || render_data.draw_vol) {
       const cmin = render_data.funcmin;
       const cmax = render_data.funcmax;
-      this.gui_status_default.colormap_min = cmin;
-      this.gui_status_default.colormap_max = cmax;
+      this.gui_status_default.Colormap.min = cmin;
+      this.gui_status_default.Colormap.max = cmax;
 
       if (this.gui_status.autoscale) {
         if (this.gui_status.eval == 3) {
           // norm of vector-valued function
-          this.gui_status.colormap_min = 0;
-          this.gui_status.colormap_max = Math.max(
+          this.gui_status.Colormap.min = 0;
+          this.gui_status.Colormap.max = Math.max(
             Math.abs(cmin),
             Math.abs(cmax)
           );
         } else {
-          this.gui_status.colormap_min = cmin;
-          this.gui_status.colormap_max = cmax;
+          this.gui_status.Colormap.min = cmin;
+          this.gui_status.Colormap.max = cmax;
         }
         this.gui.c_cmin.updateDisplay();
         this.gui.c_cmax.updateDisplay();
@@ -925,12 +910,12 @@ export class Scene extends WebGLScene {
     if (rd.draw_surf || rd.draw_vol) {
       const cmin = mix(rd.funcmin, rd2.funcmin);
       const cmax = mix(rd.funcmax, rd2.funcmax);
-      this.gui_status_default.colormap_min = cmin;
-      this.gui_status_default.colormap_max = cmax;
+      this.gui_status_default.Colormap.min = cmin;
+      this.gui_status_default.Colormap.max = cmax;
 
       if (this.gui_status.autoscale) {
-        this.gui_status.colormap_min = cmin;
-        this.gui_status.colormap_max = cmax;
+        this.gui_status.Colormap.min = cmin;
+        this.gui_status.Colormap.max = cmax;
         this.gui.c_cmin.updateDisplay();
         this.gui.c_cmax.updateDisplay();
       }
@@ -1184,8 +1169,8 @@ export class Scene extends WebGLScene {
       this.renderer.clippingPlanes = [world_clipping_plane];
 
     if (gui_status.colormap_ncolors) {
-      uniforms.colormap_min.value = gui_status.colormap_min;
-      uniforms.colormap_max.value = gui_status.colormap_max;
+      uniforms.colormap_min.value = gui_status.Colormap.min;
+      uniforms.colormap_max.value = gui_status.Colormap.max;
     }
 
     if (this.clipping_vectors_object != null) {

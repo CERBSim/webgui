@@ -8,6 +8,7 @@ export class GUI extends dat.GUI {
   gui_status_default;
   gui_container;
   gui_functions;
+  gui_colormap;
   c_autoscale;
   c_eval;
   c_cmin;
@@ -19,7 +20,7 @@ export class GUI extends dat.GUI {
       this.container.removeChild(this.gui_container);
   }
 
-  constructor(container, data, onchange, options_ = {}) {
+  constructor(container, data, onchange, options_ = {}, gui_functions = {}) {
     const options = {
       autoPlace: false,
       closeOnTop: true,
@@ -47,15 +48,17 @@ export class GUI extends dat.GUI {
       edges: true,
       mesh: true,
       elements: true,
-      autoscale: true,
-      colormap_ncolors: 8,
-      colormap_min: -1.0,
-      colormap_max: 1.0,
       deformation: 0.0,
       show_grid: false,
       line_thickness: 5,
       Multidim: { t: 0.0, multidim: 0, animate: false, speed: 2 },
       Complex: { phase: 0.0, deform: 0.0, animate: false, speed: 2 },
+      Colormap: {
+        autoscale: true,
+        ncolors: 8,
+        min: -1.0,
+        max: 1.0,
+      },
       Clipping: {
         enable: false,
         function: true,
@@ -82,22 +85,28 @@ export class GUI extends dat.GUI {
 
     const gui_status = JSON.parse(JSON.stringify(gui_status_default)); // deep-copy settings
     this.gui_status = gui_status;
-    this.gui_functions = {};
+    this.gui_functions = { ...gui_functions };
+    this.gui_colormap = this.addFolder('Colormap');
+
+    for (const name in this.gui_functions) this.add(this.gui_functions, name);
 
     if (data.draw_vol || data.draw_surf) {
       const cmin = data.funcmin;
       const cmax = data.funcmax;
-      gui_status.colormap_min = cmin;
-      gui_status.colormap_max = cmax;
-      gui_status_default.colormap_min = cmin;
-      gui_status_default.colormap_max = cmax;
-      gui_status_default.autoscale = data.autoscale || false;
+      gui_status.Colormap.min = cmin;
+      gui_status.Colormap.max = cmax;
+      gui_status_default.Colormap.min = cmin;
+      gui_status_default.Colormap.max = cmax;
+      gui_status_default.Colormap.autoscale = data.autoscale || false;
 
       gui_status.autoscale = this.gui_status_default.autoscale;
-      this.c_autoscale = this.add(gui_status, 'autoscale');
-      this.c_cmin = this.add(gui_status, 'colormap_min');
+      this.c_autoscale = this.gui_colormap.add(
+        gui_status.Colormap,
+        'autoscale'
+      );
+      this.c_cmin = this.gui_colormap.add(gui_status.Colormap, 'min');
       this.c_cmin.onChange(this.onchange);
-      this.c_cmax = this.add(gui_status, 'colormap_max');
+      this.c_cmax = this.gui_colormap.add(gui_status.Colormap, 'max');
       this.c_cmax.onChange(this.onchange);
 
       this.c_autoscale.onChange((checked) => {
@@ -112,16 +121,24 @@ export class GUI extends dat.GUI {
     }
   }
 
+  get colormap() {
+    return {
+      min: this.gui_status.Colormap.min,
+      max: this.gui_status.Colormap.max,
+      ncolors: this.gui_status.Colormap.ncolors,
+    };
+  }
+
   updateColormapToAutoscale() {
     const s = this.gui_status;
     const def = this.gui_status_default;
     if (s.eval == 3) {
       // drawing norm -> min is 0
-      s.colormap_min = 0.0;
-      s.colormap_max = Math.max(def.colormap_max, def.colormap_min);
+      s.Colormap.min = 0.0;
+      s.Colormap.max = Math.max(def.Colormap.max, def.Colormap.min);
     } else {
-      s.colormap_min = def.colormap_min;
-      s.colormap_max = def.colormap_max;
+      s.Colormap.min = def.Colormap.min;
+      s.Colormap.max = def.Colormap.max;
     }
     this.c_cmin.updateDisplay();
     this.c_cmax.updateDisplay();

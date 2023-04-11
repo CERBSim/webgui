@@ -1,23 +1,17 @@
 import { getShader, readB64, mixB64, MAX_SUBDIVISION } from './utils';
+import { RenderObject } from './render_object';
 
 import * as THREE from 'three';
 
-export class ThickEdgesObject extends THREE.Mesh {
-  uniforms;
-  data;
+export class ThickEdgesObject extends RenderObject {
   have_deformation: boolean;
   have_z_deformation: boolean;
-  buffer_geometry: THREE.BufferGeometry;
-  name_: string;
+  geometry: THREE.BufferGeometry;
 
-  constructor(data, global_uniforms) {
+  constructor(data, global_uniforms, path = []) {
+    super(data, global_uniforms, path);
     const have_deformation = data.mesh_dim == data.funcdim && !data.is_complex;
     const have_z_deformation = data.mesh_dim == 2 && data.funcdim > 0;
-
-    const uniforms = {
-      n_segments: new THREE.Uniform(5),
-      ...global_uniforms,
-    };
 
     const geo = new THREE.InstancedBufferGeometry();
 
@@ -40,6 +34,7 @@ export class ThickEdgesObject extends THREE.Mesh {
     }
 
     geo.setAttribute('position', new THREE.Float32BufferAttribute(inst, 2));
+    this.uniforms.n_segments = new THREE.Uniform(5);
 
     const defines = Object({ ORDER: data.order2d });
     if (have_deformation) defines.DEFORMATION = 1;
@@ -48,27 +43,26 @@ export class ThickEdgesObject extends THREE.Mesh {
     const wireframe_material = new THREE.RawShaderMaterial({
       vertexShader: getShader('splines.vert', defines),
       fragmentShader: getShader('splines.frag', defines),
-      uniforms: uniforms,
+      uniforms: this.uniforms,
     });
-
-    super(geo, wireframe_material);
-    this.name_ = data.name;
-    this.buffer_geometry = geo;
-    this.uniforms = uniforms;
+    this.three_object = new THREE.Mesh(geo, wireframe_material);
+    this.geometry = geo;
+    this.name = 'Edges';
   }
 
   update(gui_status) {
-    (this as THREE.Mesh).visible = gui_status.edges;
+    super.update(gui_status);
     if (gui_status.subdivision !== undefined) {
       const sd = gui_status.subdivision;
       this.uniforms.n_segments.value = sd;
-      this.buffer_geometry.setDrawRange(0, 6 * sd);
+      this.geometry.setDrawRange(0, 6 * sd);
     }
   }
 
   updateRenderData(data, data2, t) {
-    this.data = data;
-    const geo = this.buffer_geometry;
+    this.data = this.extractData(data);
+    data2 = data2 && this.extractData(data2);
+    const geo = this.geometry;
     const pdata = data.edges;
     const pdata2 = data2 && data2.edges;
     const do_interpolate = t !== undefined;
@@ -96,13 +90,11 @@ export class ThickEdgesObject extends THREE.Mesh {
   }
 }
 
-export class FieldLinesObject extends THREE.Mesh {
-  data;
-  buffer_geometry: THREE.BufferGeometry;
-  name_: string;
-  index: number;
+export class FieldLinesObject extends RenderObject {
+  geometry: THREE.BufferGeometry;
 
-  constructor(data, global_uniforms, index) {
+  constructor(data, uniforms, path) {
+    super(data, uniforms, path);
     const geo = new THREE.InstancedBufferGeometry();
     const cyl = new THREE.CylinderGeometry(1, 1, 1, 8, 1, true);
     cyl.translate(0, 0.5, 0);
@@ -111,10 +103,7 @@ export class FieldLinesObject extends THREE.Mesh {
     geo.setAttribute('normal', cyl.getAttribute('normal'));
     geo.setAttribute('uv', cyl.getAttribute('uv'));
 
-    const uniforms = {
-      ...global_uniforms,
-      thickness: new THREE.Uniform(data.thickness),
-    };
+    this.uniforms.thickness = new THREE.Uniform(data.thickness);
     const defines = {};
     const material = new THREE.RawShaderMaterial({
       vertexShader: getShader('fieldlines.vert', defines),
@@ -127,38 +116,30 @@ export class FieldLinesObject extends THREE.Mesh {
       uniforms: uniforms,
     });
 
-    super(geo, material);
-    this.name_ = data.name;
-    this.buffer_geometry = geo;
-    this.index = index;
-    (this as THREE.Mesh).frustumCulled = false;
-  }
-
-  update(gui_status) {
-    (this as THREE.Mesh).visible = gui_status.Objects[this.name_];
+    this.three_object = new THREE.Mesh(geo, material);
+    this.three_object.frustumCulled = false;
+    this.geometry = geo;
   }
 
   updateRenderData(data) {
-    this.data = this.index !== null ? data[this.index] : data;
+    this.data = this.extractData(data);
     const setAttribute = (name: string, num_components: number) => {
       const vals = new Float32Array(this.data[name]);
       const attr = new THREE.InstancedBufferAttribute(vals, num_components);
-      this.buffer_geometry.setAttribute(name, attr);
+      this.geometry.setAttribute(name, attr);
     };
     setAttribute('pstart', 3);
     setAttribute('pend', 3);
     setAttribute('value', 1);
-    this.buffer_geometry.instanceCount = this.data.value.length;
+    this.geometry.instanceCount = this.data.value.length;
   }
 }
 
-export class LinesObject extends THREE.LineSegments {
-  data;
-  buffer_geometry: THREE.BufferGeometry;
-  name_: string;
-  index: number;
+export class LinesObject extends RenderObject {
+  geometry: THREE.BufferGeometry;
 
-  constructor(data, index) {
+  constructor(data, uniforms, path) {
+    super(data, uniforms, path);
     const geo = new THREE.BufferGeometry();
 
     geo.setAttribute(
@@ -169,32 +150,24 @@ export class LinesObject extends THREE.LineSegments {
 
     const material = new THREE.LineBasicMaterial({ color });
 
-    super(geo, material);
-    this.name_ = data.name;
-    this.buffer_geometry = geo;
-    this.index = index;
-  }
-
-  update(gui_status) {
-    (this as THREE.Mesh).visible = gui_status.Objects[this.name_];
+    this.geometry = geo;
+    this.three_object = new THREE.LineSegments(geo, material);
   }
 
   updateRenderData(data) {
-    this.data = data[this.index];
-    this.buffer_geometry.setAttribute(
+    this.data = this.extractData(data);
+    this.geometry.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(this.data.position, 3)
     );
   }
 }
 
-export class PointsObject extends THREE.Points {
-  data;
-  buffer_geometry: THREE.BufferGeometry;
-  name_: string;
-  index: number;
+export class PointsObject extends RenderObject {
+  geometry: THREE.BufferGeometry;
 
-  constructor(data, index) {
+  constructor(data, uniforms, path) {
+    super(data, uniforms, path);
     const color = new THREE.Color(data.color || 0x808080);
     const n = 101;
     const tdata = new Uint8Array(4 * n * n);
@@ -229,19 +202,13 @@ export class PointsObject extends THREE.Points {
       transparent: true,
     });
 
-    super(geo, material);
-    this.name_ = data.name;
-    this.buffer_geometry = geo;
-    this.index = index;
-  }
-
-  update(gui_status) {
-    (this as THREE.Mesh).visible = gui_status.Objects[this.name_];
+    this.three_object = new THREE.Points(geo, material);
+    this.geometry = geo;
   }
 
   updateRenderData(data) {
-    this.data = data[this.index];
-    this.buffer_geometry.setAttribute(
+    this.data = this.extractData(data);
+    this.geometry.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(this.data.position, 3)
     );

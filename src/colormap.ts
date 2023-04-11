@@ -188,13 +188,13 @@ export class ColormapObject extends THREE.Mesh {
 
   update(gui_status) {
     if (
-      this.min_ != gui_status.colormap_min ||
-      this.max_ != gui_status.colormap_max ||
-      this.n_colors != gui_status.colormap_ncolors
+      this.min_ != gui_status.Colormap.min ||
+      this.max_ != gui_status.Colormap.max ||
+      this.n_colors != gui_status.Colormap.ncolors
     ) {
-      this.min_ = gui_status.colormap_min;
-      this.max_ = gui_status.colormap_max;
-      this.n_colors = gui_status.colormap_ncolors;
+      this.min_ = gui_status.Colormap.min;
+      this.max_ = gui_status.Colormap.max;
+      this.n_colors = gui_status.Colormap.ncolors;
       this.updateTexture();
       if (!this.mesh_only) this.updateLabels(gui_status);
     }
