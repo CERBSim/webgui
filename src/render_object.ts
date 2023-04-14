@@ -35,6 +35,7 @@ export class RenderObject {
     this.three_object.visible = gui_status.Objects[this.name];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   updateRenderData(data, data2, t) {
     this.data = this.extractData(data);
   }
