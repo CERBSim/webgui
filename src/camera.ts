@@ -140,9 +140,11 @@ export class CameraControls extends THREE.EventDispatcher {
         // map to 2D screen space
         const x = Math.round(((vector.x + 1) * rect.width) / 2);
         const y = Math.round(((-vector.y + 1) * rect.height) / 2);
-        el.style.display = 'block';
         el.style.top = `${y}px`;
         el.style.left = `${x}px`;
+        if (x < 0 || y < 0 || y > rect.height || x > rect.width)
+          el.style.display = 'none';
+        else el.style.display = 'block';
       }
     }
     super.dispatchEvent(changeEvent);
