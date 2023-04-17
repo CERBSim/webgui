@@ -794,7 +794,6 @@ export class Scene extends WebGLScene {
       const on_init = Function('scene', 'render_data', render_data.on_init);
       on_init(this, render_data);
     }
-    this.on('afterrender', () => this.controls.update());
     this.animate();
     llog.release();
   }
