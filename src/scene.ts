@@ -30,7 +30,6 @@ import { Label3D } from './label';
 import { GUI } from './gui';
 
 import * as THREE from 'three';
-// import Stats from "https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min";
 
 import './styles.css';
 
@@ -64,10 +63,10 @@ export class Scene extends WebGLScene {
   three_clipping_plane: THREE.Plane;
   world_clipping_plane: THREE.Plane;
   light_dir: THREE.Vector3;
-  stats;
   event_handlers;
 
   gui;
+  gui_misc;
   gui_status_default;
   gui_status;
   gui_objects;
@@ -174,7 +173,6 @@ export class Scene extends WebGLScene {
 
     if (settings.camera) this.controls.loadSettings(settings.camera);
 
-    // stats.showPanel(parseInt(this.gui_status.Misc.stats));
     for (const i in this.gui.__controllers)
       this.gui.__controllers[i].updateDisplay();
     for (const f in this.gui.__folders) {
@@ -370,7 +368,6 @@ export class Scene extends WebGLScene {
     this.is_complex = render_data.is_complex;
     console.log('THREE', THREE);
     console.log('dat', dat);
-    // console.log("Stats", Stats);
 
     this.have_deformation =
       render_data.mesh_dim == render_data.funcdim && !render_data.is_complex;
@@ -475,6 +472,9 @@ export class Scene extends WebGLScene {
     this.gui_status_default = gui.gui_status_default;
     gui_status.Objects = {};
     this.gui_objects = gui.addFolder('Objects');
+    this.gui_objects.open();
+    const gui_light = gui.addFolder('Light');
+    const gui_misc = gui.addFolder('Misc');
 
     llog.info('GUI', gui);
     llog.info('gui_status', gui_status);
@@ -487,7 +487,9 @@ export class Scene extends WebGLScene {
     uniforms.n_segments = new THREE.Uniform(5);
     if (render_data.edges.length) {
       this.addRenderObject(new ThickEdgesObject(render_data, uniforms));
-      gui.add(gui_status, 'line_thickness', 1, 20, 1).onChange(animate);
+      gui_misc
+        .add(gui_status.Misc, 'line_thickness', 1, 20, 1)
+        .onChange(animate);
     }
 
     if (this.have_z_deformation || this.have_deformation) {
@@ -638,7 +640,7 @@ export class Scene extends WebGLScene {
     if (render_data.show_wireframe && render_data.Bezier_points.length > 0) {
       this.addRenderObject(new WireframeObject(render_data, uniforms, []));
       // this.pivot.add(this.wireframe_object);
-      gui.add(gui_status, 'subdivision', 1, 20, 1).onChange(animate);
+      gui_misc.add(gui_status.Misc, 'subdivision', 1, 20, 1).onChange(animate);
       // gui.add(gui_status, 'mesh').onChange(animate);
     }
 
@@ -705,16 +707,11 @@ export class Scene extends WebGLScene {
       }
     }
 
-    const gui_light = gui.addFolder('Light');
     gui_light.add(gui_status.Light, 'ambient', 0.0, 1.0).onChange(animate);
     gui_light.add(gui_status.Light, 'diffuse', 0.0, 1.0).onChange(animate);
     gui_light.add(gui_status.Light, 'shininess', 0.0, 100.0).onChange(animate);
     gui_light.add(gui_status.Light, 'specularity', 0.0, 1.0).onChange(animate);
 
-    const gui_misc = gui.addFolder('Misc');
-    //   gui_misc.add(gui_status.Misc, "stats", {"none":-1, "FPS":0, "ms":1, "memory":2}).onChange(function(show_fps) {
-    //       stats.showPanel( parseInt(show_fps) );
-    //   });
     gui_functions['reset settings'] = () => {
       this.setGuiSettings(this.gui_status_default);
     };
@@ -736,18 +733,12 @@ export class Scene extends WebGLScene {
         }
       }
     };
+    gui_misc.add(gui_status.Misc, 'fast_draw');
     gui_misc.add(gui_functions, 'reset settings');
     gui_misc.add(gui_functions, 'store settings');
     gui_misc.add(gui_functions, 'load settings');
+    this.gui_misc = gui_misc;
 
-    gui_misc.add(gui_status.Misc, 'reduce_subdivision');
-
-    gui_misc.add(gui_status.Misc, 'colormap').onChange(animate);
-
-    gui_misc.add(gui_status.Misc, 'axes').onChange(animate);
-    gui_misc.add(gui_status.Misc, 'version').onChange((value) => {
-      this.version_object.style.display = value ? 'block' : 'none';
-    });
     gui_functions['reset'] = () => {
       this.controls.reset();
     };
@@ -965,9 +956,11 @@ export class Scene extends WebGLScene {
       this.renderer.setRenderTarget(render_target);
       this.renderer.setClearColor(new THREE.Color(-1.0, -1.0, -1.0));
       this.renderer.clear(true, true, true);
-      this.uniforms.line_thickness.value = this.gui_status.line_thickness * 4;
+      this.uniforms.line_thickness.value =
+        this.gui_status.Misc.line_thickness * 4;
       this.renderer.render(this.pivot, this.camera);
-      this.uniforms.line_thickness.value = this.gui_status.line_thickness / h;
+      this.uniforms.line_thickness.value =
+        this.gui_status.Misc.line_thickness / h;
       const gl = this.context;
       this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
       // console.log("pixels", pixels);
@@ -1068,21 +1061,8 @@ export class Scene extends WebGLScene {
     for (const obj of this.render_objects_per_mode[mode]) obj.render(data);
   }
 
-  render() {
-    const now = new Date().getTime();
-    const frame_time = 0.001 * (new Date().getTime() - this.last_frame_time);
-
-    this.requestId = 0;
-
-    if (this.ortho_camera === undefined) return; // not fully initialized yet
-
-    this.handleEvent('beforerender', [this, frame_time]);
-
-    const gui_status = this.gui_status;
-    const uniforms = this.uniforms;
-
-    const h = this.renderer.domElement.height;
-    uniforms.line_thickness.value = gui_status.line_thickness / h;
+  setClippingPlane() {
+    const { gui_status, uniforms } = this;
 
     if (this.clipping_function_object != null)
       this.clipping_function_object.render(this);
@@ -1097,8 +1077,6 @@ export class Scene extends WebGLScene {
     three_clipping_plane.constant =
       gui_status.Clipping.dist -
       three_clipping_plane.normal.dot(this.mesh_center);
-
-    // console.log("three_clipping_plane normal and const", three_clipping_plane.normal, three_clipping_plane.constant);
 
     this.clipping_plane.set(
       three_clipping_plane.normal.x,
@@ -1125,11 +1103,29 @@ export class Scene extends WebGLScene {
       uniforms.colormap_min.value = gui_status.Colormap.min;
       uniforms.colormap_max.value = gui_status.Colormap.max;
     }
+  }
+
+  render() {
+    const now = new Date().getTime();
+    const frame_time = 0.001 * (new Date().getTime() - this.last_frame_time);
+
+    this.requestId = 0;
+
+    if (this.ortho_camera === undefined) return; // not fully initialized yet
+
+    this.handleEvent('beforerender', [this, frame_time]);
+
+    const { gui_status, uniforms } = this;
+
+    const h = this.renderer.domElement.height;
+    uniforms.line_thickness.value = gui_status.Misc.line_thickness / h;
 
     if (this.clipping_vectors_object != null) {
       this.clipping_vectors_object.visible = gui_status.Vectors.show;
       uniforms.vectors_offset.value = gui_status.Vectors.offset;
     }
+
+    this.setClippingPlane();
 
     if (this.is_complex) {
       uniforms.complex_scale.value.x = Math.cos(-gui_status.Complex.phase);

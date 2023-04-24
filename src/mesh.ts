@@ -76,8 +76,8 @@ export class MeshFunctionObject extends RenderObject {
 
   render(data) {
     if (!this.update(data)) return;
-    if (data.gui_status.subdivision !== undefined) {
-      const sd = data.gui_status.subdivision;
+    if (data.gui_status.Misc.subdivision !== undefined) {
+      const sd = data.gui_status.Misc.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, 3 * sd * sd);
     }
@@ -181,8 +181,8 @@ export class WireframeObject extends RenderObject {
 
   render(data) {
     if (!this.update(data)) return;
-    if (data.gui_status.subdivision !== undefined) {
-      const sd = data.gui_status.subdivision;
+    if (data.gui_status.Misc.subdivision !== undefined) {
+      const sd = data.gui_status.Misc.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, sd + 1);
     }
@@ -300,8 +300,8 @@ export class ClippingFunctionObject extends RenderObject {
 
   render(data) {
     if (!this.update(data)) return;
-    if (data.gui_status.subdivision !== undefined) {
-      const sd = data.gui_status.subdivision;
+    if (data.gui_status.Misc.subdivision !== undefined) {
+      const sd = data.gui_status.Misc.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, 6 * sd * sd * sd);
     }
