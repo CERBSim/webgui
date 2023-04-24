@@ -115,7 +115,7 @@ export class GUI extends dat.GUI {
 
       if (cmax > cmin) this.setStepSize(cmin, cmax);
 
-      this.add(gui_status, 'colormap_ncolors', 2, 32, 1).onChange(
+      this.add(gui_status.Colormap, 'ncolors', 2, 32, 1).onChange(
         this.onchange
       );
     }

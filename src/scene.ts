@@ -7,6 +7,7 @@ import {
 } from './utils';
 
 import { RenderObject, extractData } from './render_object';
+import { Axes } from './axes';
 
 import {
   MeshFunctionObject,
@@ -21,7 +22,7 @@ import {
   FieldLinesObject,
 } from './edges';
 
-import { ColormapObject } from './colormap';
+import { Colorbar } from './colormap';
 import { CameraControls } from './camera';
 
 import { Label3D } from './grid';
@@ -34,7 +35,7 @@ import './styles.css';
 
 export { THREE };
 
-function makeRenderObject(data, uniforms, path = []) {
+function makeRenderObject(data, uniforms, path = [], scene) {
   const type = extractData(data, path).type;
   switch (type) {
     case 'lines':
@@ -43,6 +44,8 @@ function makeRenderObject(data, uniforms, path = []) {
       return new PointsObject(data, uniforms, path);
     case 'fieldlines':
       return new FieldLinesObject(data, uniforms, path);
+    case 'text':
+      return new Label3D(scene.container, data, path);
   }
 }
 
@@ -55,7 +58,7 @@ export class Scene extends WebGLScene {
   perspective_camera: THREE.PerspectiveCamera;
   orthographic_camera: THREE.OrthographicCamera;
   camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
-  widgets_camera: THREE.OrthographicCamera;
+  ortho_camera: THREE.OrthographicCamera;
   clipping_plane: THREE.Vector4;
   three_clipping_plane: THREE.Plane;
   world_clipping_plane: THREE.Plane;
@@ -67,20 +70,28 @@ export class Scene extends WebGLScene {
   gui_status_default;
   gui_status;
   gui_objects;
+  gui_widgets;
   gui_functions;
   gui_container;
   uniforms;
 
-  colormap_object;
   edges_object;
   wireframe_object: THREE.Line;
   mesh_object;
   clipping_function_object: THREE.Mesh;
   clipping_vectors_object: THREE.Mesh;
-  axes_object;
   center_tag;
   grid;
   render_objects = [];
+  render_objects_per_mode = {};
+  render_modes: Array<string> = [
+    'default',
+    'no_clipping',
+    'overlay',
+    'clipping_vectors',
+    'select',
+  ];
+  overlay_objects = [];
 
   is_complex: boolean;
   trafo;
@@ -101,6 +112,7 @@ export class Scene extends WebGLScene {
   mesh_radius: number;
 
   pivot: THREE.Group;
+  // overlay_pivot: THREE.Group;
 
   have_deformation: boolean;
   have_z_deformation: boolean;
@@ -115,6 +127,10 @@ export class Scene extends WebGLScene {
 
   constructor() {
     super();
+
+    for (const mode of this.render_modes)
+      this.render_objects_per_mode[mode] = [];
+
     this.have_webgl2 = false;
 
     this.event_handlers = {};
@@ -138,7 +154,8 @@ export class Scene extends WebGLScene {
     if (this.labels && this.labels.length)
       this.labels.map((label) => label.el.remove());
 
-    if (this.colormap_object) this.colormap_object.cleanup();
+    for (let i = 0; i < this.overlay_objects.length; i++)
+      this.overlay_objects[i].cleanupHTML();
 
     this.labels = [];
     if (this.tooltip) this.tooltip.remove();
@@ -199,7 +216,7 @@ export class Scene extends WebGLScene {
     const h = this.element.parentNode.clientHeight - 6;
 
     const aspect = w / h;
-    this.widgets_camera = new THREE.OrthographicCamera(
+    this.ortho_camera = new THREE.OrthographicCamera(
       -aspect,
       aspect,
       1.0,
@@ -207,7 +224,9 @@ export class Scene extends WebGLScene {
       -100,
       100
     );
-    if (this.colormap_object) this.colormap_object.onResize(w, h);
+
+    this.render_objects.forEach((obj) => obj.onResize(w, h));
+
     this.camera.aspect = aspect;
     this.camera.left = -aspect;
     this.camera.right = aspect;
@@ -287,7 +306,25 @@ export class Scene extends WebGLScene {
 
   addRenderObject(object: RenderObject) {
     this.render_objects.push(object);
-    if (object.three_object) this.pivot.add(object.three_object);
+    // if (object.three_object) this.pivot.add(object.three_object);
+    const name = object.name;
+    if (name && !(name in this.gui_status.Objects)) {
+      const animate = () => this.animate();
+      this.gui_status.Objects[name] = true;
+      this.gui_objects.add(this.gui_status.Objects, name).onChange(animate);
+    }
+    for (const mode of object.render_modes) {
+      if (!(mode in this.render_objects_per_mode)) {
+        console.error('Unknown render mode: ' + mode);
+      } else this.render_objects_per_mode[mode].push(object);
+    }
+  }
+
+  // Add RenderObject which is rendered using the widgets_camera (2d overlay)
+  addOverlayObject(object: RenderObject) {
+    // this.overlay_objects.push(object);
+    // console.log('add', object, this.overlay_pivot);
+    // if (object.three_object) this.overlay_pivot.add(object.three_object);
     const name = object.name;
     this.gui_status.Objects[name] = true;
     const animate = () => this.animate();
@@ -320,14 +357,12 @@ export class Scene extends WebGLScene {
     uniforms.colormap_size = new THREE.Uniform(new THREE.Vector2(1, 1));
     uniforms.dark_backside = new THREE.Uniform(true);
 
-    this.colormap_object = null;
     this.edges_object = null;
     this.wireframe_object = null;
     this.mesh_object = null;
     this.render_objects = [];
     this.clipping_function_object = null;
     this.clipping_vectors_object = null;
-    this.axes_object = null;
     this.buffer_scene = null;
     this.buffer_object = null;
     this.buffer_camera = null;
@@ -358,9 +393,6 @@ export class Scene extends WebGLScene {
     this.scene = new THREE.Scene();
     // if(window.matchMedia('(prefers-color-scheme: dark)').matches)
     //   this.scene.background = new THREE.Color(0x292c2e);
-    this.axes_object = new THREE.AxesHelper(0.15);
-    this.axes_object.matrixAutoUpdate = false;
-
     this.tooltip = document.createElement('div');
     const el_text = document.createTextNode('tooltip');
     this.tooltip.appendChild(el_text);
@@ -374,6 +406,8 @@ export class Scene extends WebGLScene {
 
     this.pivot = new THREE.Group();
     this.pivot.matrixAutoUpdate = false;
+    // this.overlay_pivot = new THREE.Group();
+    // this.overlay_pivot.matrixAutoUpdate = false;
 
     this.buffer_scene = new THREE.Scene();
 
@@ -448,33 +482,6 @@ export class Scene extends WebGLScene {
     llog.info('GUI', gui);
     llog.info('gui_status', gui_status);
 
-    if (this.labels && this.labels.length)
-      this.labels.map((label) => label.el.remove());
-
-    this.labels = [];
-    const s = 0.2;
-    this.labels.push(
-      Label3D(
-        this.container,
-        new THREE.Vector3(s, 0, 0),
-        gui_status.axes_labels[0]
-      )
-    );
-    this.labels.push(
-      Label3D(
-        this.container,
-        new THREE.Vector3(0, s, 0),
-        gui_status.axes_labels[1]
-      )
-    );
-    this.labels.push(
-      Label3D(
-        this.container,
-        new THREE.Vector3(0, 0, s),
-        gui_status.axes_labels[2]
-      )
-    );
-
     // var planeGeom = new THREE.PlaneBufferGeometry(10, 5, 10, 5);
     // console.log("planegeom", planeGeom);
     // var gridPlane = new THREE.LineSegments(planeGeom, new THREE.LineBasicMaterial({color: "black"}));
@@ -482,16 +489,15 @@ export class Scene extends WebGLScene {
 
     // const grid = new THREE.GridHelper( 400, 40, 0x0000ff, 0x808080 );
 
-    if (this.colormap_object == null) {
-      this.colormap_object = new ColormapObject(
-        this.render_data,
-        this.uniforms,
-        this.container,
-        this.gui_status
-      );
-
-      this.colormap_object.updateTexture(gui_status);
-    }
+    const colorbar = new Colorbar(
+      this.render_data,
+      this.uniforms,
+      [],
+      this.container
+    );
+    // colorbar.update(gui_status);
+    this.addRenderObject(colorbar);
+    this.addRenderObject(new Axes(this.container));
 
     uniforms.n_segments = new THREE.Uniform(5);
     if (render_data.edges.length) {
@@ -603,27 +609,20 @@ export class Scene extends WebGLScene {
       const objects = render_data.objects;
       for (let i = 0; i < objects.length; i++) {
         // console.log("object", objects[i].type);
-        if (objects[i].type === 'text') {
-          const p = objects[i].position;
-          this.render_objects.push(null);
-          // console.log("label3d", p, p[0], p[1], p[2], objects[i].text);
-          this.labels.push(
-            Label3D(
-              this.container,
-              new THREE.Vector3(p[0], p[1], p[2]),
-              objects[i].text
-            )
-          );
-        } else {
-          const obj = makeRenderObject(render_data, uniforms, ['objects', i]);
-          this.render_objects.push(obj);
-          this.pivot.add(obj);
-          const name = objects[i].name;
-          if (!(name in gui_status.Objects)) {
-            gui_status.Objects[name] = true;
-            this.gui_objects.add(gui_status.Objects, name).onChange(animate);
-          }
-        }
+        // if (objects[i].type === 'text') {
+        //   // console.log("label3d", p, p[0], p[1], p[2], objects[i].text);
+        //   this.render_objects.push(
+        //     new Label3D(this.container, render_data, ['objects', i])
+        //   );
+        // } else {
+        const obj = makeRenderObject(
+          render_data,
+          uniforms,
+          ['objects', i],
+          this
+        );
+        this.addRenderObject(obj);
+        // }
       }
     }
 
@@ -767,8 +766,7 @@ export class Scene extends WebGLScene {
 
     gui_misc.add(gui_status.Misc, 'reduce_subdivision');
 
-    if (this.colormap_object)
-      gui_misc.add(gui_status.Misc, 'colormap').onChange(animate);
+    gui_misc.add(gui_status.Misc, 'colormap').onChange(animate);
 
     gui_misc.add(gui_status.Misc, 'axes').onChange(animate);
     gui_misc.add(gui_status.Misc, 'version').onChange((value) => {
@@ -874,7 +872,7 @@ export class Scene extends WebGLScene {
         this.gui.c_cmin.updateDisplay();
         this.gui.c_cmax.updateDisplay();
 
-        this.colormap_object.update(this.gui_status);
+        // this.colormap_object.update(this.gui_status);
       }
 
       if (cmax > cmin) this.gui.setStepSize(cmin, cmax);
@@ -1088,13 +1086,29 @@ export class Scene extends WebGLScene {
     return null;
   }
 
+  renderObjects(mode: string) {
+    const camera =
+      mode === 'overlay' ? this.ortho_camera : this.perspective_camera;
+
+    const data = {
+      gui_status: this.gui_status,
+      camera,
+      mode,
+      canvas: this.canvas,
+      renderer: this.renderer,
+      controls: this.controls,
+    };
+
+    for (const obj of this.render_objects_per_mode[mode]) obj.render(data);
+  }
+
   render() {
     const now = new Date().getTime();
     const frame_time = 0.001 * (new Date().getTime() - this.last_frame_time);
 
     this.requestId = 0;
 
-    if (this.widgets_camera === undefined) return; // not fully initialized yet
+    if (this.ortho_camera === undefined) return; // not fully initialized yet
 
     this.handleEvent('beforerender', [this, frame_time]);
 
@@ -1104,23 +1118,14 @@ export class Scene extends WebGLScene {
     const h = this.renderer.domElement.height;
     uniforms.line_thickness.value = gui_status.line_thickness / h;
 
-    this.axes_object.visible = gui_status.Misc.axes;
-    for (let i = 0; i < 3; i++)
-      this.labels[i].el.style.visibility = gui_status.Misc.axes
-        ? 'visible'
-        : 'hidden';
-
     // if (this.edges_object != null) this.edges_object.update(gui_status);
 
     // if (this.wireframe_object != null) this.wireframe_object.update(gui_status);
 
     // if (this.mesh_object != null) this.mesh_object.update(gui_status);
 
-    for (let i = 0; i < this.render_objects.length; i++)
-      if (this.render_objects[i] != null)
-        this.render_objects[i].update(gui_status);
-
-    if (this.colormap_object != null) this.colormap_object.update(gui_status);
+    // for (let i = 0; i < this.labels.length; i++)
+    //   this.controls.updateLabel3D(this.labels[i]);
 
     if (this.grid != null) {
       this.grid.visible = this.gui_status.show_grid;
@@ -1132,7 +1137,7 @@ export class Scene extends WebGLScene {
     }
 
     if (this.clipping_function_object != null)
-      this.clipping_function_object.update(gui_status);
+      this.clipping_function_object.render(this);
 
     const three_clipping_plane = this.three_clipping_plane;
     three_clipping_plane.normal.set(
@@ -1168,7 +1173,7 @@ export class Scene extends WebGLScene {
     if (gui_status.Clipping.enable)
       this.renderer.clippingPlanes = [world_clipping_plane];
 
-    if (gui_status.colormap_ncolors) {
+    if (gui_status.Colormap.ncolors) {
       uniforms.colormap_min.value = gui_status.Colormap.min;
       uniforms.colormap_max.value = gui_status.Colormap.max;
     }
@@ -1201,20 +1206,31 @@ export class Scene extends WebGLScene {
     this.renderer.setRenderTarget(null);
     this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
     this.renderer.clear(true, true, true);
-    this.renderer.render(this.scene, this.camera);
+    // this.renderer.render(this.scene, this.camera);
+
+    this.renderObjects('default');
+    // for (let i = 0; i < this.render_objects.length; i++)
+    //   if (this.render_objects[i] != null) this.render_objects[i].render(this);
 
     this.renderer.clippingPlanes = [];
 
-    // render after clipping
-    if (this.center_tag != null) {
-      this.renderer.render(this.center_tag, this.camera);
-    }
+    // this.renderObjects('no_clipping');
+    // // render after clipping
+    // if (this.center_tag != null) {
+    //   this.renderer.render(this.center_tag, this.camera);
+    // }
 
-    if (this.colormap_object && gui_status.Misc.colormap)
-      this.renderer.render(this.colormap_object, this.widgets_camera);
+    this.renderObjects('overlay');
 
-    if (this.axes_object && gui_status.Misc.axes)
-      this.renderer.render(this.axes_object, this.widgets_camera);
+    // for (let i = 0; i < this.overlay_objects.length; i++)
+    //   if (this.overlay_objects[i] != null) this.overlay_objects[i].render(this);
+
+    // for (let i = 0; i < this.overlay_objects.length; i++)
+    //   if (this.overlay_objects[i].three_object != null)
+    //     this.renderer.render(
+    //       this.overlay_objects[i].three_object,
+    //       this.ortho_camera
+    //     );
 
     if (gui_status.Complex.animate) {
       gui_status.Complex.phase += frame_time * gui_status.Complex.speed;

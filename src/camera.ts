@@ -101,6 +101,10 @@ export class CameraControls extends THREE.EventDispatcher {
     }
   }
 
+  get matrix() {
+    return this.mat;
+  }
+
   reset() {
     const s = 1.0 / this.mesh_radius;
     this.center.copy(this.scene.mesh_center);
@@ -111,42 +115,56 @@ export class CameraControls extends THREE.EventDispatcher {
     this.scene.setCenterTag();
   }
 
-  update() {
-    this.pivotObject.matrix.copy(this.mat);
-    const aspect = this.domElement.offsetWidth / this.domElement.offsetHeight;
+  // updateLabel2D(label) {
+  //   const { el, p } = label;
+  //   const rect = this.scene.canvas.getBoundingClientRect();
+  //   const vector = new THREE.Vector3();
+  //   vector.copy(p).applyMatrix4(this.scene.overlay_pivot.matrixWorld);
+  //   vector.project(this.scene.ortho_camera);
+  //   // map to 2D screen space
+  //   const x = Math.round(((vector.x + 1) * rect.width) / 2);
+  //   const y = Math.round(((-vector.y + 1) * rect.height) / 2);
+  //   el.style.display = 'block';
+  //   el.style.top = `${y}px`;
+  //   el.style.left = `${x}px`;
+  // }
+
+  updateLabel3D(label) {
+    return;
+    const vector = new THREE.Vector3();
+    const { el, p } = label;
+    const rect = this.scene.canvas.getBoundingClientRect();
+    vector.copy(p).applyMatrix4(this.mat);
+    vector.project(this.scene.camera);
+    // map to 2D screen space
+    const x = Math.round(((vector.x + 1) * rect.width) / 2);
+    const y = Math.round(((-vector.y + 1) * rect.height) / 2);
+    el.style.top = `${y}px`;
+    el.style.left = `${x}px`;
+    if (x < 0 || y < 0 || y > rect.height || x > rect.width)
+      el.style.display = 'none';
+    else el.style.display = 'block';
+  }
+
+  get aspect() {
+    return this.domElement.offsetWidth / this.domElement.offsetHeight;
+  }
+  get rotmat() {
     const rotmat = new THREE.Matrix4();
     rotmat.extractRotation(this.mat);
-    this.scene.axes_object.matrixWorld
-      .makeTranslation(-0.85 * aspect, -0.85, 0)
-      .multiply(rotmat);
+    return rotmat;
+  }
 
-    const vector = new THREE.Vector3();
-    const rect = this.scene.canvas.getBoundingClientRect();
-    for (let i = 0; i < this.scene.labels.length; i++) {
-      const { el, p } = this.scene.labels[i];
-      if (this.scene.widgets_camera && i < 3) {
-        vector.copy(p).applyMatrix4(this.scene.axes_object.matrixWorld);
-        vector.project(this.scene.widgets_camera);
-        // map to 2D screen space
-        const x = Math.round(((vector.x + 1) * rect.width) / 2);
-        const y = Math.round(((-vector.y + 1) * rect.height) / 2);
-        el.style.display = 'block';
-        el.style.top = `${y}px`;
-        el.style.left = `${x}px`;
-      }
-      if (i >= 3) {
-        vector.copy(p).applyMatrix4(this.mat);
-        vector.project(this.scene.camera);
-        // map to 2D screen space
-        const x = Math.round(((vector.x + 1) * rect.width) / 2);
-        const y = Math.round(((-vector.y + 1) * rect.height) / 2);
-        el.style.top = `${y}px`;
-        el.style.left = `${x}px`;
-        if (x < 0 || y < 0 || y > rect.height || x > rect.width)
-          el.style.display = 'none';
-        else el.style.display = 'block';
-      }
-    }
+  update() {
+    this.pivotObject.matrix.copy(this.mat);
+    const rotmat = new THREE.Matrix4();
+    rotmat.extractRotation(this.mat);
+
+    // // needed for labels: clean this up
+    // this.scene.overlay_pivot.matrixWorld
+    //   .makeTranslation(-0.85 * this.aspect, -0.85, 0)
+    //   .multiply(this.rotmat);
+
     super.dispatchEvent(changeEvent);
   }
 

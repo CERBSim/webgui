@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+import { RenderObject } from './render_object';
+
 import './styles.css';
 
 function makeSelectedFaceTexture(
@@ -123,22 +125,27 @@ function makeColormapTexture(n_colors) {
   return colormap_texture;
 }
 
-export class ColormapObject extends THREE.Mesh {
+export class Colorbar extends RenderObject {
+  three_object: THREE.Object3D;
   mesh_material;
   mesh_only: boolean;
   labels;
   labels_object;
   divs;
   container;
+  enabled = true;
   min_: number;
   max_: number;
   n_colors: bigint;
-  uniforms;
-  data;
   label_style: string;
 
-  constructor(data, uniforms, container, gui_status) {
-    const mesh_only = data.funcdim == 0;
+  constructor(data, global_uniforms, path = [], container) {
+    super(data, global_uniforms, path);
+    this.name = 'Colorbar';
+    this.render_modes = ['overlay'];
+    this.data = this.extractData(data);
+    const mesh_only = this.data.funcdim == 0;
+    if (mesh_only) this.enabled = false;
 
     let material = null;
     if (!mesh_only) {
@@ -148,13 +155,11 @@ export class ColormapObject extends THREE.Mesh {
         side: THREE.DoubleSide,
         wireframe: false,
       });
-      super(geo, material);
+      this.three_object = new THREE.Mesh(geo, material);
+      this.three_object.autoUpdateMatrix = false;
     } else {
-      super();
+      this.three_object = null;
     }
-
-    this.uniforms = uniforms;
-    this.data = data;
 
     // Create 5 html div/text elements for numbers
     this.labels = [];
@@ -170,7 +175,6 @@ export class ColormapObject extends THREE.Mesh {
     }
     container.appendChild(labels_object);
     this.labels_object = labels_object;
-    this.updateLabels(gui_status);
     this.mesh_material = material;
     this.mesh_only = mesh_only;
     this.container = container;
@@ -179,14 +183,15 @@ export class ColormapObject extends THREE.Mesh {
     this.label_style +=
       'onmousedown="return false; user-select:none;-o-user-select:none;unselectable="on";';
     this.label_style += 'position: absolute; z-index: 1; display:block;';
-    this.update(gui_status);
   }
 
-  cleanup() {
+  cleanupHTML() {
     this.labels_object.innerHTML = '';
   }
 
-  update(gui_status) {
+  render(data) {
+    const visible = this.update(data);
+    const { gui_status } = data;
     if (
       this.min_ != gui_status.Colormap.min ||
       this.max_ != gui_status.Colormap.max ||
@@ -196,22 +201,22 @@ export class ColormapObject extends THREE.Mesh {
       this.max_ = gui_status.Colormap.max;
       this.n_colors = gui_status.Colormap.ncolors;
       this.updateTexture();
-      if (!this.mesh_only) this.updateLabels(gui_status);
+      if (!this.mesh_only) this.updateLabels();
     }
-    this.labels_object.style.display = gui_status.Misc.colormap
-      ? 'block'
-      : 'none';
+    this.labels_object.style.display = visible ? 'block' : 'none';
+    if (this.three_object && visible)
+      data.renderer.render(this.three_object, data.camera);
   }
 
-  onResize(w, h) {
+  onResize(w: number, h: number) {
     if (this.mesh_only) return;
     const aspect = w / h;
     const p = new THREE.Vector3();
-    super.getWorldPosition(p);
-    super.translateOnAxis(p, -1.0);
-    super.translateY(0.95);
-    super.translateX(-0.93 * aspect);
-    super.updateWorldMatrix(false, false);
+    this.three_object.getWorldPosition(p);
+    this.three_object.translateOnAxis(p, -1.0);
+    this.three_object.translateY(0.95);
+    this.three_object.translateX(-0.93 * aspect);
+    this.three_object.updateWorldMatrix(false, false);
 
     const n = this.labels.length;
     const y = Math.round(0.5 * (0.05 + 0.07) * h);
@@ -242,7 +247,6 @@ export class ColormapObject extends THREE.Mesh {
     if (this.uniforms.tex_colormap === undefined)
       this.uniforms.tex_colormap = { value: null };
 
-    console.log('set texture', tex.image);
     this.uniforms.colormap_size.value.x = tex.image.width;
     this.uniforms.colormap_size.value.y = tex.image.height;
 
@@ -250,11 +254,11 @@ export class ColormapObject extends THREE.Mesh {
     if (!this.mesh_only) this.mesh_material.map = tex;
   }
 
-  updateLabels(gui_status) {
+  updateLabels() {
     const n = this.labels.length;
-    const min = gui_status.colormap_min;
-    const inc = (gui_status.colormap_max - min) / (n - 1);
-    if (gui_status.Misc.colormap)
+    const min = this.min_;
+    const inc = (this.max_ - min) / (n - 1);
+    if (this.enabled)
       for (let i = 0; i < n; i++)
         this.labels[i].nodeValue = (min + inc * i).toPrecision(2);
     else for (let i = 0; i < n; i++) this.labels[i].nodeValue = '';

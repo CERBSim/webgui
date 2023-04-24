@@ -66,6 +66,7 @@ export class MeshFunctionObject extends RenderObject {
     mesh_material.polygonOffsetUnits = 1;
 
     this.three_object = new THREE.Mesh(geo, mesh_material);
+    this.three_object.autoUpdateMatrix = false;
     this.three_object.name = data.name;
     this.name = 'Surface';
     this.data = data;
@@ -73,13 +74,15 @@ export class MeshFunctionObject extends RenderObject {
     this.geometry = geo;
   }
 
-  update(gui_status) {
-    super.update(gui_status);
-    if (gui_status.subdivision !== undefined) {
-      const sd = gui_status.subdivision;
+  render(data) {
+    if (!this.update(data)) return;
+    if (data.gui_status.subdivision !== undefined) {
+      const sd = data.gui_status.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, 3 * sd * sd);
     }
+    this.three_object.matrixWorld.copy(data.controls.mat);
+    data.renderer.render(this.three_object, data.camera);
   }
 
   updateRenderData(data, data2, t) {
@@ -171,17 +174,20 @@ export class WireframeObject extends RenderObject {
     });
 
     this.three_object = new THREE.Line(geo, wireframe_material);
+    this.three_object.autoUpdateMatrix = false;
     this.geometry = geo;
     this.name = 'Wireframe';
   }
 
-  update(gui_status) {
-    super.update(gui_status);
-    if (gui_status.subdivision !== undefined) {
-      const sd = gui_status.subdivision;
+  render(data) {
+    if (!this.update(data)) return;
+    if (data.gui_status.subdivision !== undefined) {
+      const sd = data.gui_status.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, sd + 1);
     }
+    this.three_object.matrixWorld.copy(data.controls.mat);
+    data.renderer.render(this.three_object, data.camera);
   }
 
   updateRenderData(data, data2, t) {
@@ -292,13 +298,15 @@ export class ClippingFunctionObject extends RenderObject {
     this.geometry = geo;
   }
 
-  update(gui_status) {
-    super.update(gui_status);
-    if (gui_status.subdivision !== undefined) {
-      const sd = gui_status.subdivision;
+  render(data) {
+    if (!this.update(data)) return;
+    if (data.gui_status.subdivision !== undefined) {
+      const sd = data.gui_status.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, 6 * sd * sd * sd);
     }
+    this.three_object.matrixWorld.copy(data.controls.mat);
+    data.renderer.render(this.three_object, data.camera);
   }
 
   updateRenderData(data, data2, t) {

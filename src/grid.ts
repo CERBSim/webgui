@@ -1,5 +1,5 @@
 /*
-import { 
+import {
   LineSegments,
   LineBasicMaterial,
   Mesh,
@@ -15,6 +15,8 @@ import {
 */
 
 import * as THREE from 'three';
+
+import { RenderObject } from './render_object';
 // import TextSprite from '@seregpie/three.text-sprite';
 
 function toString(x) {
@@ -25,60 +27,108 @@ function toString(x) {
 
 import './styles.css';
 
-export function Label3D(parent, p, text) {
-  /*
-  const instance :any = new TextSprite({
-    alignment: 'left',
-    color: '#24ff00',
-    fontSize: 8,
-    fontStyle: 'italic',
-    text: text,
-  });
-  console.log("sprite", instance);
-  instance.position.set(p.x, p.y, p.z);
-  return instance;
-  */
+export class Label3D extends RenderObject {
+  parent;
+  element;
+  position: THREE.Vector3;
 
-  // const obj = new THREE.Points();
+  constructor(parent, data, path = []) {
+    super(data, {}, path);
+    this.data = this.extractData(data);
 
-  // obj.position.set(p.x, p.y, p.z)
-  // obj.geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [p.x, p.y, p.z] , 3 ) );
-  const element = document.createElement('div');
-  const el_text = document.createTextNode(text);
-  element.appendChild(el_text);
+    const element = document.createElement('div');
+    const el_text = document.createTextNode(this.data.text);
+    element.appendChild(el_text);
 
-  parent.appendChild(element);
+    parent.appendChild(element);
 
-  element.classList.add('label3d');
-  element.style.top = '0px';
-  element.style.left = '0px';
+    element.classList.add('label3d');
+    element.style.top = '0px';
+    element.style.left = '0px';
+    this.parent = parent;
+    this.element = element;
+    if (this.data.position instanceof THREE.Vector3)
+      this.position = new THREE.Vector3().copy(this.data.position);
+    else this.position = new THREE.Vector3().fromArray(this.data.position);
+  }
 
-  return { el: element, p: new THREE.Vector3().copy(p) };
-
-  /*
-  obj.onBeforeRender = ( renderer, scene, camera, geometry, material, group) => {
-    console.log("camera", camera);
-    obj.updateWorldMatrix(true, false);
-    var vector = new THREE.Vector3();
-    var canvas = renderer.domElement;
-
-    vector.copy(obj.position);
-
-    // map to normalized device coordinate (NDC) space
-    vector.project( camera );
-    console.log(vector.x, vector.y);
-
+  render(data) {
+    if (!this.update(data)) {
+      this.element.style.visibility = 'hidden';
+      return;
+    }
+    const { controls, camera, pivot, canvas } = data;
+    const rect = canvas.getBoundingClientRect();
+    this.element.style.visibility = 'visible';
+    const vector = new THREE.Vector3();
+    const mat = pivot !== undefined ? pivot.matrixWorld : controls.mat;
+    vector.copy(this.position).applyMatrix4(mat);
+    vector.project(camera);
     // map to 2D screen space
-    const x = Math.round( (   vector.x + 1 ) * canvas.width  / 2 );
-    const y = Math.round( (   vector.y + 1 ) * canvas.height / 2 );
-
-    // console.log(vector.x, vector.y);
-    // element.setAttribute("style", style+`transform: translate(-50%, -50%); left: ${vector.x}px; top: ${vector.y}px` );
-    element.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
-  };
-  return obj;
-  */
+    const x = Math.round(((vector.x + 1) * rect.width) / 2);
+    const y = Math.round(((-vector.y + 1) * rect.height) / 2);
+    this.element.style.top = `${y}px`;
+    this.element.style.left = `${x}px`;
+    if (x < 0 || y < 0 || y > rect.height || x > rect.width)
+      this.element.style.display = 'none';
+    else this.element.style.display = 'block';
+  }
 }
+
+// export function Label3D(parent, p, text) {
+//   /*
+//   const instance :any = new TextSprite({
+//     alignment: 'left',
+//     color: '#24ff00',
+//     fontSize: 8,
+//     fontStyle: 'italic',
+//     text: text,
+//   });
+//   console.log("sprite", instance);
+//   instance.position.set(p.x, p.y, p.z);
+//   return instance;
+//   */
+
+//   // const obj = new THREE.Points();
+
+//   // obj.position.set(p.x, p.y, p.z)
+//   // obj.geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [p.x, p.y, p.z] , 3 ) );
+//   const element = document.createElement('div');
+//   const el_text = document.createTextNode(text);
+//   element.appendChild(el_text);
+
+//   parent.appendChild(element);
+
+//   element.classList.add('label3d');
+//   element.style.top = '0px';
+//   element.style.left = '0px';
+
+//   return { el: element, p: new THREE.Vector3().copy(p) };
+
+//   /*
+//   obj.onBeforeRender = ( renderer, scene, camera, geometry, material, group) => {
+//     console.log("camera", camera);
+//     obj.updateWorldMatrix(true, false);
+//     var vector = new THREE.Vector3();
+//     var canvas = renderer.domElement;
+
+//     vector.copy(obj.position);
+
+//     // map to normalized device coordinate (NDC) space
+//     vector.project( camera );
+//     console.log(vector.x, vector.y);
+
+//     // map to 2D screen space
+//     const x = Math.round( (   vector.x + 1 ) * canvas.width  / 2 );
+//     const y = Math.round( (   vector.y + 1 ) * canvas.height / 2 );
+
+//     // console.log(vector.x, vector.y);
+//     // element.setAttribute("style", style+`transform: translate(-50%, -50%); left: ${vector.x}px; top: ${vector.y}px` );
+//     element.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+//   };
+//   return obj;
+//   */
+// }
 
 class PlaneGridWithLabels extends THREE.Group {
   labels;
@@ -134,7 +184,9 @@ class PlaneGridWithLabels extends THREE.Group {
       vertices.push(p1.x, p1.y, p1.z);
       if (i > 0 && i < n0) {
         // this.labels.push( Label3D( parent, lp0, `${toString(p0[d0])}` ) );
-        this.labels.push(Label3D(parent, lp1, `${toString(p1[d0])}`));
+        this.labels.push(
+          new Label3D(parent, { p: lp1, text: `${toString(p1[d0])}` })
+        );
       }
       p0.add(v0);
       p1.add(v0);
