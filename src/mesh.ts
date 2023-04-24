@@ -66,7 +66,7 @@ export class MeshFunctionObject extends RenderObject {
     mesh_material.polygonOffsetUnits = 1;
 
     this.three_object = new THREE.Mesh(geo, mesh_material);
-    this.three_object.autoUpdateMatrix = false;
+    this.three_object.matrixWorldAutoUpdate = false;
     this.three_object.name = data.name;
     this.name = 'Surface';
     this.data = data;
@@ -174,7 +174,7 @@ export class WireframeObject extends RenderObject {
     });
 
     this.three_object = new THREE.Line(geo, wireframe_material);
-    this.three_object.autoUpdateMatrix = false;
+    this.three_object.matrixWorldAutoUpdate = false;
     this.geometry = geo;
     this.name = 'Wireframe';
   }

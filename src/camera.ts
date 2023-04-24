@@ -278,7 +278,6 @@ export class CameraControls extends THREE.EventDispatcher {
   }
 
   onMouseDown(event) {
-    console.log('mouse down');
     this.did_move = false;
     if (event.button == 0) {
       event.preventDefault();
@@ -293,7 +292,6 @@ export class CameraControls extends THREE.EventDispatcher {
 
   async onMouseUp(event) {
     this.mode = null;
-    console.log('mouse up');
 
     if (!this.did_move) {
       event.preventDefault();

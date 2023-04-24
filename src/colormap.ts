@@ -11,7 +11,7 @@ function makeSelectedFaceTexture(
   col_default = [0, 1, 0, 1]
 ) {
   const n_colors = data.mesh_regions_2d;
-  const colormap_data = new Float32Array(4 * n_colors);
+  const colormap_data = new Float32Array(5 * n_colors);
 
   for (let i = 0; i < n_colors; i++) {
     colormap_data[4 * i + 0] = col_default[0];
@@ -30,7 +30,7 @@ function makeSelectedFaceTexture(
     colormap_data,
     n_colors,
     1,
-    THREE.RGBFormat,
+    THREE.RGBAFormat,
     THREE.FloatType
   );
   colormap_texture.magFilter = THREE.NearestFilter;
@@ -72,7 +72,7 @@ function makeMeshColormapTexture(data) {
 }
 
 function makeColormapTexture(n_colors) {
-  const colormap_data = new Float32Array(3 * n_colors);
+  const colormap_data = new Float32Array(4 * n_colors);
 
   const col_blue = new THREE.Vector3(0, 0, 1);
   const col_cyan = new THREE.Vector3(0, 1, 1);
@@ -108,16 +108,17 @@ function makeColormapTexture(n_colors) {
         .multiplyScalar(1.0 - hx)
         .addScaledVector(col_red, hx);
     }
-    colormap_data[3 * i + 0] = color.x;
-    colormap_data[3 * i + 1] = color.y;
-    colormap_data[3 * i + 2] = color.z;
+    colormap_data[4 * i + 0] = color.x;
+    colormap_data[4 * i + 1] = color.y;
+    colormap_data[4 * i + 2] = color.z;
+    colormap_data[4 * i + 3] = 1.0;
   }
 
   const colormap_texture = new THREE.DataTexture(
     colormap_data,
     n_colors,
     1,
-    THREE.RGBFormat,
+    THREE.RGBAFormat,
     THREE.FloatType
   );
   colormap_texture.magFilter = THREE.NearestFilter;

@@ -10,13 +10,14 @@ function generateColorTexture(names) {
     data[3 * i + 0] = c.r;
     data[3 * i + 1] = c.g;
     data[3 * i + 2] = c.b;
+    data[4 * i + 3] = 1.0;
   }
 
   const tex = new THREE.DataTexture(
     data,
     n,
     1,
-    THREE.RGBFormat,
+    THREE.RGBAFormat,
     THREE.FloatType
   );
   tex.magFilter = THREE.NearestFilter;
