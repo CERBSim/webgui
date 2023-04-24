@@ -1,5 +1,4 @@
 import * as dat from 'dat.gui';
-console.log('dat', dat);
 
 export class GUI extends dat.GUI {
   gui;
@@ -49,7 +48,6 @@ export class GUI extends dat.GUI {
       mesh: true,
       elements: true,
       deformation: 0.0,
-      show_grid: false,
       line_thickness: 5,
       Multidim: { t: 0.0, multidim: 0, animate: false, speed: 2 },
       Complex: { phase: 0.0, deform: 0.0, animate: false, speed: 2 },

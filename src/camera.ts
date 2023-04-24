@@ -115,37 +115,6 @@ export class CameraControls extends THREE.EventDispatcher {
     this.scene.setCenterTag();
   }
 
-  // updateLabel2D(label) {
-  //   const { el, p } = label;
-  //   const rect = this.scene.canvas.getBoundingClientRect();
-  //   const vector = new THREE.Vector3();
-  //   vector.copy(p).applyMatrix4(this.scene.overlay_pivot.matrixWorld);
-  //   vector.project(this.scene.ortho_camera);
-  //   // map to 2D screen space
-  //   const x = Math.round(((vector.x + 1) * rect.width) / 2);
-  //   const y = Math.round(((-vector.y + 1) * rect.height) / 2);
-  //   el.style.display = 'block';
-  //   el.style.top = `${y}px`;
-  //   el.style.left = `${x}px`;
-  // }
-
-  updateLabel3D(label) {
-    return;
-    const vector = new THREE.Vector3();
-    const { el, p } = label;
-    const rect = this.scene.canvas.getBoundingClientRect();
-    vector.copy(p).applyMatrix4(this.mat);
-    vector.project(this.scene.camera);
-    // map to 2D screen space
-    const x = Math.round(((vector.x + 1) * rect.width) / 2);
-    const y = Math.round(((-vector.y + 1) * rect.height) / 2);
-    el.style.top = `${y}px`;
-    el.style.left = `${x}px`;
-    if (x < 0 || y < 0 || y > rect.height || x > rect.width)
-      el.style.display = 'none';
-    else el.style.display = 'block';
-  }
-
   get aspect() {
     return this.domElement.offsetWidth / this.domElement.offsetHeight;
   }
@@ -159,12 +128,6 @@ export class CameraControls extends THREE.EventDispatcher {
     this.pivotObject.matrix.copy(this.mat);
     const rotmat = new THREE.Matrix4();
     rotmat.extractRotation(this.mat);
-
-    // // needed for labels: clean this up
-    // this.scene.overlay_pivot.matrixWorld
-    //   .makeTranslation(-0.85 * this.aspect, -0.85, 0)
-    //   .multiply(this.rotmat);
-
     super.dispatchEvent(changeEvent);
   }
 
@@ -315,6 +278,7 @@ export class CameraControls extends THREE.EventDispatcher {
   }
 
   onMouseDown(event) {
+    console.log('mouse down');
     this.did_move = false;
     if (event.button == 0) {
       event.preventDefault();
@@ -329,6 +293,7 @@ export class CameraControls extends THREE.EventDispatcher {
 
   async onMouseUp(event) {
     this.mode = null;
+    console.log('mouse up');
 
     if (!this.did_move) {
       event.preventDefault();
@@ -359,7 +324,7 @@ export class CameraControls extends THREE.EventDispatcher {
     if (this.mode == 'move_clipping_plane') {
       this.scene.gui_status.Clipping.dist +=
         0.0001 * event.movementY * this.scene.mesh_radius;
-      this.scene.animate();
+      super.dispatchEvent(changeEvent);
     }
     if (needs_update) {
       event.preventDefault();

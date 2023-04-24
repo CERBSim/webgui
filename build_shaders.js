@@ -36,6 +36,6 @@ function getDateTime() {
   }
   let shader_code =
     'export const shaders = ' + JSON.stringify(shader_codes) + ';\n';
-  shader_code += `console.log("loading webgui, build time = ${getDateTime()}");\n`;
+  shader_code += `export const BUILD_TIME = "${getDateTime()}";\n`;
   await fs.promises.writeFile('src/shaders.ts', shader_code);
 })();

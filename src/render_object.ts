@@ -69,3 +69,6 @@ export class RenderObject {
     //do nothing
   }
 }
+
+// export class ThreeRenderObject {
+//   constructor(three_objectdata, global_uniforms, path: Array<number | string>) {

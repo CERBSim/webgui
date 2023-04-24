@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { shaders } from './shaders';
+import { shaders, BUILD_TIME } from './shaders';
 
 export const LOG_NONE = 0;
 export const LOG_FATAL = 1;
@@ -89,6 +89,7 @@ export class WebGLScene {
 
   initCanvas(element, webgl_args) {
     const llog = log.local('initCanvas');
+    llog.info('Build time', BUILD_TIME);
     this.requestId = 0;
     this.element = element;
     const canvas = document.createElement('canvas');
