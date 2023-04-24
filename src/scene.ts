@@ -637,10 +637,10 @@ export class Scene extends WebGLScene {
     uniforms.colormap_min.value = gui_status.Colormap.min;
     uniforms.colormap_max.value = gui_status.Colormap.max;
 
+    gui_misc.add(gui_status.Misc, 'subdivision', 1, 20, 1).onChange(animate);
     if (render_data.show_wireframe && render_data.Bezier_points.length > 0) {
       this.addRenderObject(new WireframeObject(render_data, uniforms, []));
       // this.pivot.add(this.wireframe_object);
-      gui_misc.add(gui_status.Misc, 'subdivision', 1, 20, 1).onChange(animate);
       // gui.add(gui_status, 'mesh').onChange(animate);
     }
 
