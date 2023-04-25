@@ -365,9 +365,9 @@ export class Scene extends WebGLScene {
     const gui_functions = gui.gui_functions;
 
     this.gui = gui;
-    this.gui_status = gui.gui_status;
+    this.gui_status = gui.settings;
     const gui_status = this.gui_status;
-    this.gui_status_default = gui.gui_status_default;
+    this.gui_status_default = gui.settings_default;
     gui_status.Objects = {};
     this.gui_objects = gui.addFolder('Objects');
     this.gui_objects.open();

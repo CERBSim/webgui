@@ -1,10 +1,132 @@
 import * as dat from 'dat.gui';
 
+export interface MultidimSettings {
+  t: number;
+  multidim: number;
+  animate: boolean;
+  speed: number;
+}
+
+export interface ComplexSettings {
+  phase: number;
+  deform: number;
+  animate: boolean;
+  speed: number;
+}
+
+export interface ColormapSettings {
+  autoscale: boolean;
+  ncolors: number;
+  min: number;
+  max: number;
+}
+
+export interface ClippingSettings {
+  enable: boolean;
+  function: boolean;
+  x: number;
+  y: number;
+  z: number;
+  dist: number;
+}
+
+export interface LightSettings {
+  ambient: number;
+  diffuse: number;
+  shininess: number;
+  specularity: number;
+}
+
+export interface VectorsSettings {
+  show: boolean;
+  grid_size: number;
+  offset: number;
+}
+
+export interface MiscSettings {
+  line_thickness: number;
+  subdivision: number;
+  fast_draw: boolean;
+}
+
+export class GuiSettings {
+  eval = 0;
+  edges = true;
+  mesh = true;
+  elements = true;
+  deformation = 0.0;
+  Multidim: MultidimSettings = {
+    t: 0.0,
+    multidim: 0,
+    animate: false,
+    speed: 2,
+  };
+  Complex: ComplexSettings = {
+    phase: 0.0,
+    deform: 0.0,
+    animate: false,
+    speed: 2,
+  };
+  Colormap: ColormapSettings = {
+    autoscale: true,
+    ncolors: 8,
+    min: -1.0,
+    max: 1.0,
+  };
+  Clipping: ClippingSettings = {
+    enable: false,
+    function: true,
+    x: 0.0,
+    y: 0.0,
+    z: 1.0,
+    dist: 0.0,
+  };
+  Light: LightSettings = {
+    ambient: 0.3,
+    diffuse: 0.7,
+    shininess: 10,
+    specularity: 0.3,
+  };
+  Vectors: VectorsSettings = { show: false, grid_size: 10, offset: 0.0 };
+  Misc: MiscSettings = {
+    line_thickness: 5,
+    subdivision: 5,
+    fast_draw: false,
+  };
+  Objects: { [key: string]: boolean };
+
+  axes_labels: string[] = ['X', 'Y', 'Z'];
+
+  clone(): GuiSettings {
+    const cloned = new GuiSettings();
+
+    cloned.eval = this.eval;
+    cloned.edges = this.edges;
+    cloned.mesh = this.mesh;
+    cloned.elements = this.elements;
+    cloned.deformation = this.deformation;
+    cloned.Multidim = { ...this.Multidim };
+    cloned.Complex = { ...this.Complex };
+    cloned.Colormap = { ...this.Colormap };
+    cloned.Clipping = { ...this.Clipping };
+    cloned.Light = { ...this.Light };
+    cloned.Vectors = { ...this.Vectors };
+    cloned.Misc = { ...this.Misc };
+    cloned.axes_labels = [...this.axes_labels];
+
+    return cloned;
+  }
+
+  update(settings: Partial<GuiSettings>): void {
+    Object.assign(this, settings);
+  }
+}
+
 export class GUI extends dat.GUI {
-  gui;
+  gui: dat.GUI;
   container;
-  gui_status;
-  gui_status_default;
+  settings: GuiSettings = new GuiSettings();
+  settings_default: GuiSettings = new GuiSettings();
   gui_container;
   gui_functions;
   gui_colormap;
@@ -41,44 +163,13 @@ export class GUI extends dat.GUI {
     this.gui_container = gui_container;
     this.closed = true;
 
-    const gui_status_default = {
-      eval: 0,
-      edges: true,
-      mesh: true,
-      elements: true,
-      deformation: 0.0,
-      Multidim: { t: 0.0, multidim: 0, animate: false, speed: 2 },
-      Complex: { phase: 0.0, deform: 0.0, animate: false, speed: 2 },
-      Colormap: {
-        autoscale: true,
-        ncolors: 8,
-        min: -1.0,
-        max: 1.0,
-      },
-      Clipping: {
-        enable: false,
-        function: true,
-        x: 0.0,
-        y: 0.0,
-        z: 1.0,
-        dist: 0.0,
-      },
-      Light: { ambient: 0.3, diffuse: 0.7, shininess: 10, specularity: 0.3 },
-      Vectors: { show: false, grid_size: 10, offset: 0.0 },
-      Misc: {
-        line_thickness: 5,
-        subdivision: 5,
-        fast_draw: false,
-      },
-      axes_labels: ['X', 'Y', 'Z'],
-      ...data.gui_settings,
-    };
-    this.gui_status_default = gui_status_default;
+    const settings_default = this.settings_default;
+    settings_default.update(data.gui_settings);
     if (Math.max(data.order2d, data.order3d) <= 1)
-      gui_status_default.Misc.subdivision = 1;
+      settings_default.Misc.subdivision = 1;
 
-    const gui_status = JSON.parse(JSON.stringify(gui_status_default)); // deep-copy settings
-    this.gui_status = gui_status;
+    const settings = settings_default.clone();
+    this.settings = settings;
     this.gui_functions = { ...gui_functions };
 
     for (const name in this.gui_functions) this.add(this.gui_functions, name);
@@ -87,20 +178,17 @@ export class GUI extends dat.GUI {
     if (data.draw_vol || data.draw_surf) {
       const cmin = data.funcmin;
       const cmax = data.funcmax;
-      gui_status.Colormap.min = cmin;
-      gui_status.Colormap.max = cmax;
-      gui_status_default.Colormap.min = cmin;
-      gui_status_default.Colormap.max = cmax;
-      gui_status_default.Colormap.autoscale = data.autoscale || false;
+      settings.Colormap.min = cmin;
+      settings.Colormap.max = cmax;
+      settings_default.Colormap.min = cmin;
+      settings_default.Colormap.max = cmax;
+      settings_default.Colormap.autoscale = data.autoscale || false;
 
-      gui_status.autoscale = this.gui_status_default.autoscale;
-      this.c_autoscale = this.gui_colormap.add(
-        gui_status.Colormap,
-        'autoscale'
-      );
-      this.c_cmin = this.gui_colormap.add(gui_status.Colormap, 'min');
+      settings.Colormap.autoscale = this.settings_default.Colormap.autoscale;
+      this.c_autoscale = this.gui_colormap.add(settings.Colormap, 'autoscale');
+      this.c_cmin = this.gui_colormap.add(settings.Colormap, 'min');
       this.c_cmin.onChange(this.onchange);
-      this.c_cmax = this.gui_colormap.add(gui_status.Colormap, 'max');
+      this.c_cmax = this.gui_colormap.add(settings.Colormap, 'max');
       this.c_cmax.onChange(this.onchange);
 
       this.c_autoscale.onChange((checked) => {
@@ -110,22 +198,22 @@ export class GUI extends dat.GUI {
       if (cmax > cmin) this.setStepSize(cmin, cmax);
 
       this.gui_colormap
-        .add(gui_status.Colormap, 'ncolors', 2, 32, 1)
+        .add(settings.Colormap, 'ncolors', 2, 32, 1)
         .onChange(this.onchange);
     }
   }
 
   get colormap() {
     return {
-      min: this.gui_status.Colormap.min,
-      max: this.gui_status.Colormap.max,
-      ncolors: this.gui_status.Colormap.ncolors,
+      min: this.settings.Colormap.min,
+      max: this.settings.Colormap.max,
+      ncolors: this.settings.Colormap.ncolors,
     };
   }
 
   updateColormapToAutoscale() {
-    const s = this.gui_status;
-    const def = this.gui_status_default;
+    const s = this.settings;
+    const def = this.settings_default;
     if (s.eval == 3) {
       // drawing norm -> min is 0
       s.Colormap.min = 0.0;
