@@ -488,6 +488,7 @@ export class ClippingVectorsObject extends RenderObject {
     renderer.clear(true, true, true);
     const cf_visible = cf.three_object.visible;
     cf.three_object.visible = true;
+    cf.three_object.matrixWorld.identity();
 
     renderer.render(cf.three_object, this.clipping_plane_camera);
 
