@@ -14,7 +14,7 @@ export class RenderObject {
   data = null;
   three_object: THREE.Object3D;
   name: string;
-  render_modes: Array<string> = ['default'];
+  render_modes: Array<string> = ['default', 'locate', 'select'];
   path: Array<number | string>;
 
   constructor(data, global_uniforms, path: Array<number | string>) {

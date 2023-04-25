@@ -104,12 +104,14 @@ export class WebGLScene {
         ...webgl_args,
       });
       this.have_webgl2 = true;
+      this.context.getExtension('EXT_color_buffer_float');
     } else {
       console.log('your browser/OS/drivers do not support WebGL2');
       this.context = canvas.getContext('webgl', {
         alpha: false,
         ...webgl_args,
       });
+      this.context.getExtension('WEBGL_color_buffer_float');
     }
 
     this.renderer = new THREE.WebGLRenderer({
@@ -124,10 +126,12 @@ export class WebGLScene {
 
     this.render_target = new THREE.WebGLRenderTarget(
       window.innerWidth,
-      window.innerHeight
+      window.innerHeight,
+      {
+        type: THREE.FloatType,
+        format: THREE.RGBAFormat,
+      }
     );
-    this.render_target.texture.format = THREE.RGBAFormat;
-    this.render_target.texture.type = THREE.FloatType;
 
     //this is to get the correct pixel detail on portable devices
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -144,17 +148,20 @@ export class WebGLScene {
     llog.release();
   }
 
-  async animate(cancel_existing_request = false) {
-    if (this.requestId != 0 && cancel_existing_request) {
-      cancelAnimationFrame(this.requestId);
-      this.requestId = 0;
-    }
+  async animate() {
     // Don't request a frame if another one is currently in the pipeline
     if (this.requestId === 0) {
       await new Promise((resolve) => {
         this.requestId = requestAnimationFrame(resolve);
       });
       this.render();
+    }
+  }
+
+  cancelAnimation() {
+    if (this.requestId != 0) {
+      cancelAnimationFrame(this.requestId);
+      this.requestId = 0;
     }
   }
 

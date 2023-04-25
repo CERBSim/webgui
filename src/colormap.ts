@@ -66,7 +66,9 @@ function makeMeshColormapTexture(data) {
     THREE.RGBAFormat,
     THREE.FloatType
   );
+  colormap_texture.minFilter = THREE.NearestFilter;
   colormap_texture.magFilter = THREE.NearestFilter;
+  colormap_texture.generateMipmaps = false;
   colormap_texture.needsUpdate = true;
   return colormap_texture;
 }
@@ -245,9 +247,6 @@ export class Colorbar extends RenderObject {
   }
 
   setTexture(tex) {
-    if (this.uniforms.tex_colormap === undefined)
-      this.uniforms.tex_colormap = { value: null };
-
     this.uniforms.colormap_size.value.x = tex.image.width;
     this.uniforms.colormap_size.value.y = tex.image.height;
 

@@ -76,8 +76,10 @@ export class MeshFunctionObject extends RenderObject {
 
   render(data) {
     if (!this.update(data)) return;
-    if (data.gui_status.Misc.subdivision !== undefined) {
-      const sd = data.gui_status.Misc.subdivision;
+
+    const { gui_status } = data;
+    if (gui_status.Misc.subdivision !== undefined) {
+      const sd = gui_status.Misc.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, 3 * sd * sd);
     }
@@ -87,7 +89,6 @@ export class MeshFunctionObject extends RenderObject {
 
   updateRenderData(data, data2, t) {
     this.data = this.extractData(data);
-    console.log('update mesh render data', data);
     const geo = this.geometry;
     const pdata = data.Bezier_trig_points;
     const pdata2 = data2 && data2.Bezier_trig_points;
@@ -181,13 +182,14 @@ export class WireframeObject extends RenderObject {
 
   render(data) {
     if (!this.update(data)) return;
-    if (data.gui_status.Misc.subdivision !== undefined) {
-      const sd = data.gui_status.Misc.subdivision;
+    const { gui_status, renderer, controls, camera } = data;
+    if (gui_status.Misc.subdivision !== undefined) {
+      const sd = gui_status.Misc.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, sd + 1);
     }
-    this.three_object.matrixWorld.copy(data.controls.mat);
-    data.renderer.render(this.three_object, data.camera);
+    this.three_object.matrixWorld.copy(controls.mat);
+    renderer.render(this.three_object, camera);
   }
 
   updateRenderData(data, data2, t) {
@@ -294,19 +296,24 @@ export class ClippingFunctionObject extends RenderObject {
     geo.setAttribute('vertid', new THREE.Float32BufferAttribute(vertid, 4));
 
     this.three_object = new THREE.Mesh(geo, material);
+    this.three_object.matrixWorldAutoUpdate = false;
     this.name = 'Clipping Plane';
     this.geometry = geo;
   }
 
   render(data) {
+    const { gui_status, renderer, controls, camera } = data;
+
     if (!this.update(data)) return;
-    if (data.gui_status.Misc.subdivision !== undefined) {
-      const sd = data.gui_status.Misc.subdivision;
+    if (!gui_status.Clipping.enable) return;
+
+    if (gui_status.Misc.subdivision !== undefined) {
+      const sd = gui_status.Misc.subdivision;
       this.uniforms.n_segments.value = sd;
       this.geometry.setDrawRange(0, 6 * sd * sd * sd);
     }
-    this.three_object.matrixWorld.copy(data.controls.mat);
-    data.renderer.render(this.three_object, data.camera);
+    this.three_object.matrixWorld.copy(controls.mat);
+    renderer.render(this.three_object, camera);
   }
 
   updateRenderData(data, data2, t) {
@@ -337,5 +344,180 @@ export class ClippingFunctionObject extends RenderObject {
     for (const i in names) geo.setAttribute(names[i], get_values(i, 4));
 
     geo.boundingSphere = new THREE.Sphere(data.mesh_center, data.mesh_radius);
+  }
+}
+
+export class ClippingVectorsObject extends RenderObject {
+  clipping_function: ClippingFunctionObject;
+  clipping_plane_camera: THREE.OrthographicCamera;
+  buffer_texture: THREE.WebGLRenderTarget;
+  mesh_radius: number;
+  mesh_center: number;
+  geometry: THREE.InstancedBufferGeometry;
+  plane: THREE.Plane;
+  offset: number;
+  grid_size: number;
+
+  constructor(data, uniforms, path, clipping_function: ClippingFunctionObject) {
+    super(data, uniforms, path);
+
+    this.clipping_function = clipping_function;
+    const r = data.mesh_radius;
+    this.clipping_plane_camera = new THREE.OrthographicCamera(
+      -r,
+      r,
+      r,
+      -r,
+      -10,
+      10
+    );
+    this.mesh_radius = r;
+    this.mesh_center = new THREE.Vector3().fromArray(data.mesh_center);
+    this.plane = new THREE.Plane();
+    this.offset = null;
+    this.grid_size = null;
+
+    this.uniforms.clipping_plane_c = new THREE.Uniform(new THREE.Vector3());
+    this.uniforms.clipping_plane_t1 = new THREE.Uniform(new THREE.Vector3());
+    this.uniforms.clipping_plane_t2 = new THREE.Uniform(new THREE.Vector3());
+    this.uniforms.vectors_offset = new THREE.Uniform(this.offset);
+    this.uniforms.grid_size = new THREE.Uniform(this.grid_size);
+    this.uniforms.tex_values = new THREE.Uniform();
+    this.render_modes = ['no_clipping'];
+
+    const material = new THREE.RawShaderMaterial({
+      vertexShader: getShader('vector_function.vert'),
+      fragmentShader: getShader(
+        'function.frag',
+        { NO_CLIPPING: 1, SIDE_LIGHTS: 1 },
+        data.user_eval_function
+      ),
+      side: THREE.DoubleSide,
+      uniforms: this.uniforms,
+    });
+
+    const geo = new THREE.InstancedBufferGeometry();
+    const cone = new THREE.ConeGeometry(0.5, 1, 10);
+    geo.setIndex(cone.getIndex());
+    geo.setAttribute('position', cone.getAttribute('position'));
+    geo.setAttribute('normal', cone.getAttribute('normal'));
+    geo.setAttribute('uv', cone.getAttribute('uv'));
+
+    this.three_object = new THREE.Mesh(geo, material);
+    this.three_object.matrixWorldAutoUpdate = false;
+    this.three_object.frustumCulled = false;
+    this.name = 'Clipping Vectors';
+    this.geometry = geo;
+
+    this.buffer_texture = new THREE.WebGLRenderTarget(1, 1, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.NearestFilter,
+      type: THREE.FloatType,
+      format: THREE.RGBAFormat,
+    });
+  }
+
+  render(data) {
+    const { gui_status, renderer, camera, controls } = data;
+
+    if (!this.update(data)) return;
+    if (!gui_status.Clipping.enable) return;
+
+    this.updateGridsize(data);
+    this.updateClippingPlaneCamera(data);
+
+    this.uniforms.vectors_offset.value = gui_status.Vectors.offset;
+    this.uniforms.grid_size.value = gui_status.Vectors.grid_size;
+    if (gui_status.Misc.subdivision !== undefined) {
+      const sd = gui_status.Misc.subdivision;
+      this.uniforms.n_segments.value = sd;
+      this.geometry.setDrawRange(0, 6 * sd * sd * sd);
+    }
+    this.three_object.matrixWorld.copy(controls.mat);
+    renderer.render(this.three_object, camera);
+  }
+
+  updateClippingPlaneCamera({ gui_status, clipping_plane, renderer, context }) {
+    if (this.plane.equals(clipping_plane)) return;
+    context.finish();
+    const n = gui_status.Vectors.grid_size;
+    const plane_center = new THREE.Vector3();
+    clipping_plane.projectPoint(this.mesh_center, plane_center);
+    const plane0 = clipping_plane.clone();
+    plane0.constant = 0.0;
+    const normal = clipping_plane.normal;
+
+    const t2 = new THREE.Vector3();
+    if (Math.abs(normal.z) < 0.5)
+      plane0.projectPoint(new THREE.Vector3(0, 0, 1), t2);
+    else if (Math.abs(normal.y) < 0.5)
+      plane0.projectPoint(new THREE.Vector3(0, 1, 0), t2);
+    else plane0.projectPoint(new THREE.Vector3(1, 0, 0), t2);
+
+    const t1 = new THREE.Vector3().crossVectors(t2, plane0.normal);
+    t1.setLength((2 * this.mesh_radius) / n);
+    t2.setLength((2 * this.mesh_radius) / n);
+
+    const position = plane_center.clone();
+    position.addScaledVector(plane0.normal, 1);
+    const target = plane_center.clone();
+    target.addScaledVector(plane0.normal, -1);
+
+    this.clipping_plane_camera.position.copy(position);
+    this.clipping_plane_camera.up = t2;
+    this.clipping_plane_camera.lookAt(target);
+    this.clipping_plane_camera.updateProjectionMatrix();
+    this.clipping_plane_camera.updateMatrix();
+
+    const cf = this.clipping_function;
+    this.uniforms.clipping_plane_c.value = plane_center;
+    this.uniforms.clipping_plane_t1.value = t1;
+    this.uniforms.clipping_plane_t2.value = t2;
+    this.uniforms.grid_size.value = n;
+
+    const function_mode = cf.uniforms.function_mode.value;
+    cf.uniforms.function_mode.value = 4;
+
+    if (gui_status.Misc.subdivision !== undefined) {
+      const sd = gui_status.Misc.subdivision;
+      cf.uniforms.n_segments.value = sd;
+      cf.geometry.setDrawRange(0, 6 * sd * sd * sd);
+    }
+    renderer.setRenderTarget(this.buffer_texture);
+    renderer.setClearColor(new THREE.Color(0.0, 0.0, 0.0));
+    renderer.clear(true, true, true);
+    const cf_visible = cf.three_object.visible;
+    cf.three_object.visible = true;
+
+    renderer.render(cf.three_object, this.clipping_plane_camera);
+
+    const pixel_buffer = new Float32Array(4 * n * n);
+    context.readPixels(0, 0, n, n, context.RGBA, context.FLOAT, pixel_buffer);
+
+    renderer.setRenderTarget(null);
+    cf.uniforms.function_mode.value = function_mode;
+    cf.three_object.visible = cf_visible;
+  }
+
+  updateGridsize({ gui_status }) {
+    if (this.grid_size == gui_status.Vectors.grid_size) return;
+    const n = gui_status.Vectors.grid_size;
+    this.grid_size = n;
+    this.buffer_texture.setSize(n, n);
+    this.uniforms.tex_values.value = this.buffer_texture.texture;
+
+    const arrowid = new Float32Array(2 * n * n);
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++) {
+        arrowid[2 * (i * n + j) + 0] = (1.0 * (j + 0.5)) / n;
+        arrowid[2 * (i * n + j) + 1] = (1.0 * (i + 0.5)) / n;
+      }
+    this.geometry.instanceCount = n * n;
+    this.geometry._maxInstanceCount = n * n;
+    this.geometry.setAttribute(
+      'arrowid',
+      new THREE.InstancedBufferAttribute(arrowid, 2)
+    );
+    this.plane.negate(); // force rerending
   }
 }

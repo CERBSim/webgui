@@ -24,6 +24,7 @@ uniform vec4 light_mat; // x=ambient, y=diffuse, z=shininess, w=specularity
 // 5   ... real part
 // 6   ... imag part
 // 7   ... geometry information (node type, index)
+// 8   ... coordinates as rgb
 
 uniform float function_mode;
 uniform vec2 complex_scale;

@@ -1,10 +1,4 @@
-import {
-  WebGLScene,
-  getShader,
-  setKeys,
-  log,
-  unpackIndexedData,
-} from './utils';
+import { WebGLScene, setKeys, log, unpackIndexedData } from './utils';
 
 import { RenderObject, extractData } from './render_object';
 import { Axes } from './axes';
@@ -14,6 +8,7 @@ import {
   MeshFunctionObject,
   WireframeObject,
   ClippingFunctionObject,
+  ClippingVectorsObject,
 } from './mesh';
 
 import {
@@ -75,13 +70,7 @@ export class Scene extends WebGLScene {
   gui_container;
   uniforms;
 
-  edges_object;
-  wireframe_object: THREE.Line;
-  mesh_object;
-  clipping_function_object: THREE.Mesh;
-  clipping_vectors_object: THREE.Mesh;
   center_tag;
-  grid;
   render_objects = [];
   render_objects_per_mode = {};
   render_modes: Array<string> = [
@@ -90,6 +79,7 @@ export class Scene extends WebGLScene {
     'overlay',
     'clipping_vectors',
     'select',
+    'locate',
   ];
   overlay_objects = [];
 
@@ -102,11 +92,6 @@ export class Scene extends WebGLScene {
   multidim_controller;
 
   phase_controller;
-
-  buffer_scene: THREE.Scene;
-  buffer_object: THREE.Mesh;
-  buffer_camera: THREE.OrthographicCamera;
-  buffer_texture;
 
   mesh_center: THREE.Vector3;
   mesh_radius: number;
@@ -154,8 +139,7 @@ export class Scene extends WebGLScene {
     if (this.labels && this.labels.length)
       this.labels.map((label) => label.el.remove());
 
-    for (let i = 0; i < this.overlay_objects.length; i++)
-      this.overlay_objects[i].cleanupHTML();
+    for (const obj of this.render_objects) obj.cleanupHTML();
 
     this.labels = [];
     if (this.tooltip) this.tooltip.remove();
@@ -235,76 +219,13 @@ export class Scene extends WebGLScene {
     this.controls.update();
   }
 
-  updateClippingPlaneCamera() {
-    const n = this.gui_status.Vectors.grid_size;
-    const plane_center = new THREE.Vector3();
-    this.three_clipping_plane.projectPoint(this.mesh_center, plane_center);
-    const plane0 = this.three_clipping_plane.clone();
-    plane0.constant = 0.0;
-    const normal = this.three_clipping_plane.normal;
-
-    const t2 = new THREE.Vector3();
-    if (Math.abs(normal.z) < 0.5)
-      plane0.projectPoint(new THREE.Vector3(0, 0, 1), t2);
-    else if (Math.abs(normal.y) < 0.5)
-      plane0.projectPoint(new THREE.Vector3(0, 1, 0), t2);
-    else plane0.projectPoint(new THREE.Vector3(1, 0, 0), t2);
-
-    const t1 = new THREE.Vector3().crossVectors(t2, plane0.normal);
-    t1.setLength((2 * this.mesh_radius) / n);
-    t2.setLength((2 * this.mesh_radius) / n);
-
-    const position = plane_center.clone();
-    position.addScaledVector(plane0.normal, 1);
-    const target = plane_center.clone();
-    target.addScaledVector(plane0.normal, -1);
-
-    this.buffer_camera.position.copy(position);
-    this.buffer_camera.up = t2;
-    this.buffer_camera.lookAt(target);
-    this.buffer_camera.updateProjectionMatrix();
-    this.buffer_camera.updateMatrix();
-
-    this.uniforms.clipping_plane_c.value = plane_center;
-    this.uniforms.clipping_plane_t1.value = t1;
-    this.uniforms.clipping_plane_t2.value = t2;
-    this.uniforms.grid_size.value = n;
-  }
-
-  updateGridsize() {
-    const n = this.gui_status.Vectors.grid_size;
-    this.buffer_texture = new THREE.WebGLRenderTarget(n, n, {
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.NearestFilter,
-      type: THREE.FloatType,
-      format: THREE.RGBAFormat,
-    });
-    this.uniforms.tex_values = new THREE.Uniform(this.buffer_texture.texture);
-    const r = this.mesh_radius;
-    this.buffer_camera = new THREE.OrthographicCamera(-r, r, r, -r, -10, 10);
-
-    const geo = <THREE.InstancedBufferGeometry>(
-      this.clipping_vectors_object.geometry
-    );
-    const arrowid = new Float32Array(2 * n * n);
-    for (let i = 0; i < n; i++)
-      for (let j = 0; j < n; j++) {
-        arrowid[2 * (i * n + j) + 0] = (1.0 * (j + 0.5)) / n;
-        arrowid[2 * (i * n + j) + 1] = (1.0 * (i + 0.5)) / n;
-      }
-    geo.instanceCount = n * n;
-    geo._maxInstanceCount = n * n;
-    geo.setAttribute('arrowid', new THREE.InstancedBufferAttribute(arrowid, 2));
-    this.animate();
-  }
-
-  addRenderObject(object: RenderObject) {
+  addRenderObject(object: RenderObject, visible = true) {
     this.render_objects.push(object);
     // if (object.three_object) this.pivot.add(object.three_object);
     const name = object.name;
     if (name && !(name in this.gui_status.Objects)) {
       const animate = () => this.animate();
-      this.gui_status.Objects[name] = true;
+      this.gui_status.Objects[name] = visible;
       this.gui_objects.add(this.gui_status.Objects, name).onChange(animate);
     }
     for (const mode of object.render_modes) {
@@ -312,17 +233,6 @@ export class Scene extends WebGLScene {
         console.error('Unknown render mode: ' + mode);
       } else this.render_objects_per_mode[mode].push(object);
     }
-  }
-
-  // Add RenderObject which is rendered using the widgets_camera (2d overlay)
-  addOverlayObject(object: RenderObject) {
-    // this.overlay_objects.push(object);
-    // console.log('add', object, this.overlay_pivot);
-    // if (object.three_object) this.overlay_pivot.add(object.three_object);
-    const name = object.name;
-    this.gui_status.Objects[name] = true;
-    const animate = () => this.animate();
-    this.gui_objects.add(this.gui_status.Objects, name).onChange(animate);
   }
 
   initCanvas(element, webgl_args) {
@@ -345,22 +255,14 @@ export class Scene extends WebGLScene {
 
     this.uniforms = {};
     const uniforms = this.uniforms;
+    uniforms.tex_colormap = new THREE.Uniform();
     uniforms.colormap_min = new THREE.Uniform(0.0);
     uniforms.colormap_max = new THREE.Uniform(1.0);
     uniforms.function_mode = new THREE.Uniform(0);
     uniforms.colormap_size = new THREE.Uniform(new THREE.Vector2(1, 1));
     uniforms.dark_backside = new THREE.Uniform(true);
 
-    this.edges_object = null;
-    this.wireframe_object = null;
-    this.mesh_object = null;
     this.render_objects = [];
-    this.clipping_function_object = null;
-    this.clipping_vectors_object = null;
-    this.buffer_scene = null;
-    this.buffer_object = null;
-    this.buffer_camera = null;
-    this.buffer_texture = null;
 
     this.last_frame_time = new Date().getTime();
     this.render_data = render_data;
@@ -384,7 +286,6 @@ export class Scene extends WebGLScene {
     this.version_object.innerHTML = '';
     this.version_object.appendChild(version_text);
 
-    this.scene = new THREE.Scene();
     // if(window.matchMedia('(prefers-color-scheme: dark)').matches)
     //   this.scene.background = new THREE.Color(0x292c2e);
     this.tooltip = document.createElement('div');
@@ -402,8 +303,6 @@ export class Scene extends WebGLScene {
     this.pivot.matrixAutoUpdate = false;
     // this.overlay_pivot = new THREE.Group();
     // this.overlay_pivot.matrixAutoUpdate = false;
-
-    this.buffer_scene = new THREE.Scene();
 
     const aspect = this.element.offsetWidth / this.element.offsetHeight;
     const near = 1;
@@ -446,7 +345,6 @@ export class Scene extends WebGLScene {
     uniforms.light_mat = new THREE.Uniform(light_mat);
 
     uniforms.do_clipping = new THREE.Uniform(false);
-    uniforms.render_depth = new THREE.Uniform(false);
     this.trafo = new THREE.Vector2(
       1.0 / 2.0 / (this.mesh_center.length() + this.mesh_radius),
       1.0 / 2.0
@@ -541,9 +439,22 @@ export class Scene extends WebGLScene {
     if (render_data.mesh_dim == 3) {
       const gui_clipping = gui.addFolder('Clipping');
       if (render_data.draw_vol) {
-        this.addRenderObject(
-          new ClippingFunctionObject(render_data, uniforms, [])
+        const clipping_function = new ClippingFunctionObject(
+          render_data,
+          uniforms,
+          []
         );
+        this.addRenderObject(clipping_function, false);
+        if (render_data.funcdim == 3)
+          this.addRenderObject(
+            new ClippingVectorsObject(
+              render_data,
+              uniforms,
+              [],
+              clipping_function
+            ),
+            false
+          );
       }
 
       if (render_data.clipping) {
@@ -565,7 +476,7 @@ export class Scene extends WebGLScene {
           this.gui_status_default.Clipping.dist = render_data.clipping_dist;
           gui_status.Clipping.dist = render_data.clipping_dist;
         }
-      } else console.log('render data not clipping found!!!');
+      }
 
       gui_clipping.add(gui_status.Clipping, 'enable').onChange(animate);
       gui_clipping.add(gui_status.Clipping, 'x', -1.0, 1.0).onChange(animate);
@@ -588,8 +499,6 @@ export class Scene extends WebGLScene {
         (render_data.draw_vol && render_data.mesh_dim == 3));
     if (draw_vectors) {
       if (render_data.vectors) {
-        this.gui_status_default.Vectors.show = true;
-        gui_status.Vectors.show = true;
         if (render_data.vectors_grid_size) {
           this.gui_status_default.Vectors.grid_size =
             render_data.vectors_grid_size;
@@ -602,29 +511,14 @@ export class Scene extends WebGLScene {
       }
 
       const gui_vec = gui.addFolder('Vectors');
-      gui_vec.add(gui_status.Vectors, 'show').onChange(animate);
-      gui_vec
-        .add(gui_status.Vectors, 'grid_size', 1, 100, 1)
-        .onChange(() => this.updateGridsize());
+      gui_vec.add(gui_status.Vectors, 'grid_size', 1, 100, 1).onChange(animate);
       gui_vec
         .add(gui_status.Vectors, 'offset', -1.0, 1.0, 0.001)
         .onChange(animate);
 
-      if (render_data.mesh_dim == 2)
-        this.buffer_object = this.mesh_object.clone();
-      else this.buffer_object = this.clipping_function_object.clone();
-
-      this.buffer_scene.add(this.buffer_object);
-
-      uniforms.clipping_plane_c = new THREE.Uniform(new THREE.Vector3());
-      uniforms.clipping_plane_t1 = new THREE.Uniform(new THREE.Vector3());
-      uniforms.clipping_plane_t2 = new THREE.Uniform(new THREE.Vector3());
-      uniforms.vectors_offset = new THREE.Uniform(gui_status.Vectors.offset);
-      uniforms.grid_size = new THREE.Uniform(gui_status.Vectors.grid_size);
-
-      this.clipping_vectors_object = this.createClippingVectors();
-      this.pivot.add(this.clipping_vectors_object);
-      this.updateGridsize();
+      // if (render_data.mesh_dim == 2)
+      //   this.buffer_object = this.mesh_object.clone();
+      // else this.buffer_object = this.clipping_function_object.clone();
     }
 
     if (this.mesh_only) {
@@ -716,7 +610,8 @@ export class Scene extends WebGLScene {
       this.setGuiSettings(this.gui_status_default);
     };
     gui_functions['store settings'] = () => {
-      document.cookie = 'gui_status=' + btoa(JSON.stringify(gui_status));
+      document.cookie =
+        'gui_status=' + btoa(JSON.stringify(this.getGuiSettings()));
     };
     gui_functions['load settings'] = () => {
       const name = 'gui_status=';
@@ -734,7 +629,6 @@ export class Scene extends WebGLScene {
       }
     };
     gui_misc.add(gui_status.Misc, 'fast_draw');
-    gui_misc.add(gui_functions, 'reset settings');
     gui_misc.add(gui_functions, 'store settings');
     gui_misc.add(gui_functions, 'load settings');
     this.gui_misc = gui_misc;
@@ -743,8 +637,6 @@ export class Scene extends WebGLScene {
       this.controls.reset();
     };
     gui.add(gui_functions, 'reset').onChange(animate);
-
-    this.scene.add(this.pivot);
 
     this.controls = new CameraControls(this, this.renderer.domElement);
     this.controls.addEventListener('change', animate);
@@ -769,30 +661,6 @@ export class Scene extends WebGLScene {
   init(element, render_data, webgl_args = {}) {
     this.initCanvas(element, webgl_args);
     this.initRenderData(render_data);
-  }
-
-  createClippingVectors() {
-    const material = new THREE.RawShaderMaterial({
-      vertexShader: getShader('vector_function.vert'),
-      fragmentShader: getShader(
-        'function.frag',
-        { NO_CLIPPING: 1, SIDE_LIGHTS: 1 },
-        this.render_data.user_eval_function
-      ),
-      side: THREE.DoubleSide,
-      uniforms: this.uniforms,
-    });
-
-    const geo = new THREE.InstancedBufferGeometry();
-    const cone = new THREE.ConeGeometry(0.5, 1, 10);
-    geo.setIndex(cone.getIndex());
-    geo.setAttribute('position', cone.getAttribute('position'));
-    geo.setAttribute('normal', cone.getAttribute('normal'));
-    geo.setAttribute('uv', cone.getAttribute('uv'));
-
-    const mesh = new THREE.Mesh(geo, material);
-    mesh.frustumCulled = false;
-    return mesh;
   }
 
   // called on scene.Redraw() from Python
@@ -842,14 +710,6 @@ export class Scene extends WebGLScene {
     const t1 = 1.0 - t;
     const mix = (a, b) => t1 * a + t * b;
 
-    if (this.edges_object != null)
-      this.edges_object.updateRenderData(rd, rd2, t);
-
-    if (this.wireframe_object != null)
-      this.wireframe_object.updateRenderData(rd, rd2, t);
-
-    if (this.mesh_object != null) this.mesh_object.updateRenderData(rd, rd2, t);
-
     if (rd2.objects)
       for (let i = 0; i < this.render_objects.length; i++)
         if (this.render_objects[i] != null)
@@ -858,9 +718,6 @@ export class Scene extends WebGLScene {
             rd2.objects[i],
             t
           );
-
-    if (this.clipping_function_object != null)
-      this.clipping_function_object.updateRenderData(rd, rd2, t);
 
     if (rd.draw_surf || rd.draw_vol) {
       const cmin = mix(rd.funcmin, rd2.funcmin);
@@ -928,7 +785,7 @@ export class Scene extends WebGLScene {
   }
 
   async getMeshIndex(x, y) {
-    await this.animate(true);
+    this.cancelAnimation();
     let index = -1;
     let dim = -1;
     if (this.mesh_only) {
@@ -1003,25 +860,23 @@ export class Scene extends WebGLScene {
     return { dim, index };
   }
 
-  async getPixelCoordinates(x, y) {
-    await this.animate(true);
+  getPixelCoordinates(x: number, y: number) {
+    this.cancelAnimation();
+    const rect = this.renderer.domElement.getBoundingClientRect();
 
-    this.uniforms.render_depth.value = true;
     this.camera.setViewOffset(
       this.renderer.domElement.width,
       this.renderer.domElement.height,
-      (x * window.devicePixelRatio) | 0,
-      (y * window.devicePixelRatio) | 0,
+      ((x - rect.left) * window.devicePixelRatio) | 0,
+      ((y - rect.top) * window.devicePixelRatio) | 0,
       1,
       1
     );
     this.renderer.setRenderTarget(this.render_target);
     this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
     this.renderer.clear(true, true, true);
-    this.renderer.render(this.scene, this.camera);
-    this.uniforms.render_depth.value = false;
+    this.renderObjects('locate');
 
-    // console.log("viewport", x * window.devicePixelRatio | 0,y * window.devicePixelRatio | 0 )
     const pixel_buffer = new Float32Array(4);
     this.context.readPixels(
       0,
@@ -1035,6 +890,7 @@ export class Scene extends WebGLScene {
     this.camera.clearViewOffset();
     // console.log("pixel buffer", pixel_buffer);
 
+    this.renderer.setRenderTarget(null);
     if (pixel_buffer[3] !== 1) {
       const p = new THREE.Vector3();
       for (let i = 0; i < 3; i++) {
@@ -1050,22 +906,26 @@ export class Scene extends WebGLScene {
       mode === 'overlay' ? this.ortho_camera : this.perspective_camera;
 
     const data = {
-      gui_status: this.gui_status,
       camera,
-      mode,
       canvas: this.canvas,
-      renderer: this.renderer,
+      context: this.context,
+      clipping_plane: this.three_clipping_plane,
       controls: this.controls,
+      gui_status: this.gui_status,
+      mode,
+      renderer: this.renderer,
     };
 
-    for (const obj of this.render_objects_per_mode[mode]) obj.render(data);
+    if (mode == 'locate') this.uniforms.function_mode.value = 8;
+    else this.uniforms.function_mode.value = parseInt(this.gui_status.eval);
+
+    for (const obj of this.render_objects_per_mode[mode]) {
+      obj.render(data);
+    }
   }
 
   setClippingPlane() {
     const { gui_status, uniforms } = this;
-
-    if (this.clipping_function_object != null)
-      this.clipping_function_object.render(this);
 
     const three_clipping_plane = this.three_clipping_plane;
     three_clipping_plane.normal.set(
@@ -1098,11 +958,6 @@ export class Scene extends WebGLScene {
 
     if (gui_status.Clipping.enable)
       this.renderer.clippingPlanes = [world_clipping_plane];
-
-    if (gui_status.Colormap.ncolors) {
-      uniforms.colormap_min.value = gui_status.Colormap.min;
-      uniforms.colormap_max.value = gui_status.Colormap.max;
-    }
   }
 
   render() {
@@ -1120,25 +975,16 @@ export class Scene extends WebGLScene {
     const h = this.renderer.domElement.height;
     uniforms.line_thickness.value = gui_status.Misc.line_thickness / h;
 
-    if (this.clipping_vectors_object != null) {
-      this.clipping_vectors_object.visible = gui_status.Vectors.show;
-      uniforms.vectors_offset.value = gui_status.Vectors.offset;
-    }
-
     this.setClippingPlane();
+
+    if (gui_status.Colormap.ncolors) {
+      uniforms.colormap_min.value = gui_status.Colormap.min;
+      uniforms.colormap_max.value = gui_status.Colormap.max;
+    }
 
     if (this.is_complex) {
       uniforms.complex_scale.value.x = Math.cos(-gui_status.Complex.phase);
       uniforms.complex_scale.value.y = Math.sin(-gui_status.Complex.phase);
-    }
-
-    if (gui_status.Vectors.show) {
-      this.updateClippingPlaneCamera();
-      uniforms.function_mode.value = 4;
-      this.renderer.setRenderTarget(this.buffer_texture);
-      this.renderer.setClearColor(new THREE.Color(0.0, 0.0, 0.0));
-      this.renderer.clear(true, true, true);
-      this.renderer.render(this.buffer_scene, this.buffer_camera);
     }
 
     uniforms.function_mode.value = parseInt(gui_status.eval);

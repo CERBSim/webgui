@@ -47,7 +47,8 @@ void main()
   }
 
 
-  if (render_depth) {
+  if(function_mode == 8.0)
+  {
       gl_FragColor = getPositionAsColor(p_);
       return;
   }
