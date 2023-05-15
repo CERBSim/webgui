@@ -17,7 +17,7 @@
   "dependencies": {
     "@types/dat.gui": "^0.7.6",
     "dat.gui": "^0.7.7",
-    "three": "^0.151.3"
+    "three": "^0.152.2"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.10.0",
