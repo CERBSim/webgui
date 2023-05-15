@@ -83,19 +83,19 @@ export class CameraControls extends THREE.EventDispatcher {
     );
     window.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
 
-    this.domElement.addEventListener(
-      'touchmove',
-      (e) => this.onTouchMove(e),
-      false
-    );
+    this.domElement.addEventListener('touchmove', (e) => this.onTouchMove(e), {
+      passive: false,
+    });
     this.domElement.addEventListener(
       'touchstart',
       (e) => this.onTouchStart(e),
-      false
+      { passive: false }
     );
 
     //   window.addEventListener( 'keydown', keydown, false );
-    this.domElement.addEventListener('wheel', (e) => this.wheel(e), false);
+    this.domElement.addEventListener('wheel', (e) => this.wheel(e), {
+      passive: false,
+    });
 
     // make sure element can receive keys.
     if (this.domElement.tabIndex === -1) {

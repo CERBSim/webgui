@@ -1,4 +1,4 @@
-import { WebGLScene, setKeys, log, unpackIndexedData } from './utils';
+import { WebGLScene, log, unpackIndexedData } from './utils';
 
 import { RenderObject, extractData } from './render_object';
 import { Axes } from './axes';
@@ -45,7 +45,6 @@ function makeRenderObject(data, uniforms, path = [], scene) {
 }
 
 export class Scene extends WebGLScene {
-  labels;
   tooltip;
 
   render_data;
@@ -61,12 +60,9 @@ export class Scene extends WebGLScene {
   event_handlers;
 
   gui;
-  gui_misc;
-  gui_status_default;
   gui_status;
   gui_objects;
   gui_widgets;
-  gui_functions;
   gui_container;
   uniforms;
 
@@ -90,8 +86,6 @@ export class Scene extends WebGLScene {
   last_frame_time: number;
 
   multidim_controller;
-
-  phase_controller;
 
   mesh_center: THREE.Vector3;
   mesh_radius: number;
@@ -136,35 +130,9 @@ export class Scene extends WebGLScene {
   }
 
   cleanup() {
-    if (this.labels && this.labels.length)
-      this.labels.map((label) => label.el.remove());
-
     for (const obj of this.render_objects) obj.cleanupHTML();
 
-    this.labels = [];
     if (this.tooltip) this.tooltip.remove();
-  }
-
-  getGuiSettings() {
-    const settings = JSON.parse(JSON.stringify(this.gui_status)); // deep-copy settings
-    settings.camera = {};
-    this.controls.storeSettings(settings.camera);
-    return JSON.parse(JSON.stringify(settings));
-  }
-
-  setGuiSettings(settings) {
-    setKeys(this.gui_status, settings);
-
-    if (settings.camera) this.controls.loadSettings(settings.camera);
-
-    for (const i in this.gui.__controllers)
-      this.gui.__controllers[i].updateDisplay();
-    for (const f in this.gui.__folders) {
-      const folder = this.gui.__folders[f];
-      for (const i in folder.__controllers)
-        folder.__controllers[i].updateDisplay();
-    }
-    this.animate();
   }
 
   exitFullscreen() {
@@ -357,22 +325,18 @@ export class Scene extends WebGLScene {
     const animate = () => this.animate();
     const gui = new GUI(
       this.container,
-      render_data,
+      this,
       animate,
       {},
       { Fullscreen: () => this.toggleFullscreen() }
     );
-    const gui_functions = gui.gui_functions;
 
     this.gui = gui;
     this.gui_status = gui.settings;
     const gui_status = this.gui_status;
-    this.gui_status_default = gui.settings_default;
     gui_status.Objects = {};
     this.gui_objects = gui.addFolder('Objects');
     this.gui_objects.open();
-    const gui_light = gui.addFolder('Light');
-    const gui_misc = gui.addFolder('Misc');
 
     llog.info('GUI', gui);
     llog.info('gui_status', gui_status);
@@ -383,61 +347,16 @@ export class Scene extends WebGLScene {
     this.addRenderObject(new Axes(this.container));
 
     uniforms.n_segments = new THREE.Uniform(5);
-    if (render_data.edges.length) {
+    if (render_data.edges.length)
       this.addRenderObject(new ThickEdgesObject(render_data, uniforms));
-      gui_misc
-        .add(gui_status.Misc, 'line_thickness', 1, 20, 1)
-        .onChange(animate);
-    }
 
-    if (this.have_z_deformation || this.have_deformation) {
-      this.gui_status_default.deformation = render_data.deformation ? 1.0 : 0.0;
-      gui_status.deformation = this.gui_status_default.deformation;
-      gui.add(gui_status, 'deformation', 0.0, 1.0, 0.0001).onChange(animate);
-      uniforms.deformation = new THREE.Uniform(gui_status.deformation);
-    }
+    if (this.have_z_deformation || this.have_deformation)
+      uniforms.deformation = new THREE.Uniform(gui.settings.deformation);
 
-    if (render_data.is_complex) {
-      this.gui_status_default.eval = 5;
-      gui_status.eval = 5;
-      this.gui.c_eval = gui
-        .add(gui_status, 'eval', { real: 5, imag: 6, norm: 3 })
-        .onChange(animate);
-
-      const cgui = gui.addFolder('Complex');
-      this.phase_controller = cgui
-        .add(gui_status.Complex, 'phase', 0, 2 * Math.PI, 0.001)
-        .onChange(animate);
-      cgui.add(gui_status.Complex, 'animate').onChange(() => {
-        this.last_frame_time = new Date().getTime();
-        this.animate();
-      });
-      cgui.add(gui_status.Complex, 'speed', 0.0, 10, 0.0001).onChange(animate);
+    if (render_data.is_complex)
       uniforms.complex_scale = new THREE.Uniform(new THREE.Vector2(1, 0));
-    } else if (render_data.funcdim == 2) {
-      gui_status.eval = 3;
-      this.gui.c_eval = gui
-        .add(gui_status, 'eval', { '0': 0, '1': 1, norm: 3 })
-        .onChange(animate);
-    } else if (render_data.funcdim == 3) {
-      gui_status.eval = 3;
-      this.gui.c_eval = gui
-        .add(gui_status, 'eval', { '0': 0, '1': 1, '2': 2, norm: 3 })
-        .onChange(animate);
-    }
-
-    if (this.gui.c_eval) {
-      if (render_data.eval != undefined) {
-        this.gui_status_default.eval = render_data.eval;
-        this.gui.c_eval.setValue(render_data.eval);
-      }
-      this.gui.c_eval.onChange(() => {
-        if (gui_status.autoscale) this.gui.updateColormapToAutoscale();
-      });
-    }
 
     if (render_data.mesh_dim == 3) {
-      const gui_clipping = gui.addFolder('Clipping');
       if (render_data.draw_vol) {
         const clipping_function = new ClippingFunctionObject(
           render_data,
@@ -456,94 +375,16 @@ export class Scene extends WebGLScene {
             false
           );
       }
-
-      if (render_data.clipping) {
-        this.gui_status_default.Clipping.enable = true;
-        gui_status.Clipping.enable = true;
-        if (render_data.clipping_x != undefined) {
-          this.gui_status_default.Clipping.x = render_data.clipping_x;
-          gui_status.Clipping.x = render_data.clipping_x;
-        }
-        if (render_data.clipping_y != undefined) {
-          this.gui_status_default.Clipping.y = render_data.clipping_y;
-          gui_status.Clipping.y = render_data.clipping_y;
-        }
-        if (render_data.clipping_z != undefined) {
-          this.gui_status_default.Clipping.z = render_data.clipping_z;
-          gui_status.Clipping.z = render_data.clipping_z;
-        }
-        if (render_data.clipping_dist != undefined) {
-          this.gui_status_default.Clipping.dist = render_data.clipping_dist;
-          gui_status.Clipping.dist = render_data.clipping_dist;
-        }
-      }
-
-      gui_clipping.add(gui_status.Clipping, 'enable').onChange(animate);
-      gui_clipping.add(gui_status.Clipping, 'x', -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, 'y', -1.0, 1.0).onChange(animate);
-      gui_clipping.add(gui_status.Clipping, 'z', -1.0, 1.0).onChange(animate);
-      gui_clipping
-        .add(
-          gui_status.Clipping,
-          'dist',
-          -1.2 * this.mesh_radius,
-          1.2 * this.mesh_radius
-        )
-        .onChange(animate);
     }
 
-    let draw_vectors = render_data.funcdim > 1 && !render_data.is_complex;
-    draw_vectors =
-      draw_vectors &&
-      ((render_data.draw_surf && render_data.mesh_dim == 2) ||
-        (render_data.draw_vol && render_data.mesh_dim == 3));
-    if (draw_vectors) {
-      if (render_data.vectors) {
-        if (render_data.vectors_grid_size) {
-          this.gui_status_default.Vectors.grid_size =
-            render_data.vectors_grid_size;
-          gui_status.Vectors.grid_size = render_data.vectors_grid_size;
-        }
-        if (render_data.vectors_offset) {
-          this.gui_status_default.Vectors.offset = render_data.vectors_offset;
-          gui_status.Vectors.offset = render_data.vectors_offset;
-        }
-      }
-
-      const gui_vec = gui.addFolder('Vectors');
-      gui_vec.add(gui_status.Vectors, 'grid_size', 1, 100, 1).onChange(animate);
-      gui_vec
-        .add(gui_status.Vectors, 'offset', -1.0, 1.0, 0.001)
-        .onChange(animate);
-
-      // if (render_data.mesh_dim == 2)
-      //   this.buffer_object = this.mesh_object.clone();
-      // else this.buffer_object = this.clipping_function_object.clone();
-    }
-
-    if (this.mesh_only) {
-      this.gui_status_default.Colormap.min = -0.5;
-      this.gui_status_default.Colormap.max = render_data.mesh_regions_2d - 0.5;
-      gui_status.Colormap.min = -0.5;
-      gui_status.Colormap.max = render_data.mesh_regions_2d - 0.5;
-      // this.setSelectedFaces();
-    }
-    uniforms.colormap_min.value = gui_status.Colormap.min;
-    uniforms.colormap_max.value = gui_status.Colormap.max;
-
-    gui_misc.add(gui_status.Misc, 'subdivision', 1, 20, 1).onChange(animate);
-    if (render_data.show_wireframe && render_data.Bezier_points.length > 0) {
+    if (render_data.show_wireframe && render_data.Bezier_points.length > 0)
       this.addRenderObject(new WireframeObject(render_data, uniforms, []));
-      // this.pivot.add(this.wireframe_object);
-      // gui.add(gui_status, 'mesh').onChange(animate);
-    }
 
-    if (render_data.show_mesh) {
+    if (render_data.show_mesh)
       this.addRenderObject(new MeshFunctionObject(render_data, uniforms));
-    }
 
     if (render_data.objects) {
-      render_data.objects.forEach((object, i: number) => {
+      render_data.objects.forEach((_, i: number) => {
         const obj = makeRenderObject(
           render_data,
           uniforms,
@@ -554,96 +395,10 @@ export class Scene extends WebGLScene {
       });
     }
 
-    if (render_data.multidim_data) {
-      const md = render_data.multidim_data.length;
-
-      if (render_data.multidim_interpolate) {
-        if (render_data.multidim_animate) {
-          this.gui_status_default.Multidim.animate = true;
-          gui_status.Multidim.animate = true;
-        }
-
-        const gui_md = gui.addFolder('Multidim');
-        this.multidim_controller = gui_md
-          .add(gui_status.Multidim, 't', 0, md, 0.01)
-          .onChange(() => {
-            const s = gui_status.Multidim.t;
-            const n = Math.floor(s);
-            const t = s - n;
-            if (n == 0)
-              this.interpolateRenderData(
-                this.render_data,
-                this.render_data.multidim_data[0],
-                t
-              );
-            else if (s == md)
-              this.setRenderData(this.render_data.multidim_data[md - 1]);
-            else
-              this.interpolateRenderData(
-                this.render_data.multidim_data[n - 1],
-                this.render_data.multidim_data[n],
-                t
-              );
-          });
-        gui_md.add(gui_status.Multidim, 'animate').onChange(() => {
-          this.last_frame_time = new Date().getTime();
-          this.animate();
-        });
-        gui_md
-          .add(gui_status.Multidim, 'speed', 0.0, 10, 0.001)
-          .onChange(animate);
-      } else {
-        gui.add(gui_status.Multidim, 'multidim', 0, md, 1).onChange(() => {
-          const n = gui_status.Multidim.multidim;
-          if (n == 0) this.setRenderData(this.render_data);
-          else this.setRenderData(this.render_data.multidim_data[n - 1]);
-        });
-      }
-    }
-
-    gui_light.add(gui_status.Light, 'ambient', 0.0, 1.0).onChange(animate);
-    gui_light.add(gui_status.Light, 'diffuse', 0.0, 1.0).onChange(animate);
-    gui_light.add(gui_status.Light, 'shininess', 0.0, 100.0).onChange(animate);
-    gui_light.add(gui_status.Light, 'specularity', 0.0, 1.0).onChange(animate);
-
-    gui_functions['reset settings'] = () => {
-      this.setGuiSettings(this.gui_status_default);
-    };
-    gui_functions['store settings'] = () => {
-      document.cookie =
-        'gui_status=' + btoa(JSON.stringify(this.getGuiSettings()));
-    };
-    gui_functions['load settings'] = () => {
-      const name = 'gui_status=';
-      const decodedCookie = decodeURIComponent(document.cookie);
-      const ca = decodedCookie.split(';');
-      for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) == ' ') {
-          c = c.substring(1);
-        }
-        if (c.indexOf(name) == 0) {
-          const s = JSON.parse(atob(c.substring(name.length, c.length)));
-          this.setGuiSettings(s);
-        }
-      }
-    };
-    gui_misc.add(gui_status.Misc, 'fast_draw');
-    gui_misc.add(gui_functions, 'store settings');
-    gui_misc.add(gui_functions, 'load settings');
-    this.gui_misc = gui_misc;
-
-    gui_functions['reset'] = () => {
-      this.controls.reset();
-    };
-    gui.add(gui_functions, 'reset').onChange(animate);
-
     this.controls = new CameraControls(this, this.renderer.domElement);
     this.controls.addEventListener('change', animate);
 
     this.updateRenderData(render_data);
-    if (render_data.gui_settings) this.setGuiSettings(render_data.gui_settings);
-    if (render_data.settings) this.setGuiSettings(render_data.settings);
 
     console.log('Scene init done', this);
     if (render_data.on_init) {
@@ -669,41 +424,12 @@ export class Scene extends WebGLScene {
     this.setRenderData(render_data);
   }
 
-  updateColormapToAutoscale({ draw_surf, draw_vol, funcmin, funcmax }) {
-    if (draw_surf || draw_vol) {
-      const cmin = funcmin;
-      const cmax = funcmax;
-      this.gui_status_default.Colormap.min = cmin;
-      this.gui_status_default.Colormap.max = cmax;
-
-      if (this.gui_status.autoscale) {
-        if (this.gui_status.eval == 3) {
-          // norm of vector-valued function
-          this.gui_status.Colormap.min = 0;
-          this.gui_status.Colormap.max = Math.max(
-            Math.abs(cmin),
-            Math.abs(cmax)
-          );
-        } else {
-          this.gui_status.Colormap.min = cmin;
-          this.gui_status.Colormap.max = cmax;
-        }
-        this.gui.c_cmin.updateDisplay();
-        this.gui.c_cmax.updateDisplay();
-      }
-
-      if (cmax > cmin) this.gui.setStepSize(cmin, cmax);
-    }
-  }
-
   setRenderData(render_data) {
     for (let i = 0; i < this.render_objects.length; i++)
       if (this.render_objects[i] != null)
         this.render_objects[i].updateRenderData(render_data);
 
-    this.updateColormapToAutoscale(render_data);
-
-    this.animate();
+    this.gui.updateColormapToAutoscale();
   }
 
   interpolateRenderData(rd, rd2, t) {
@@ -722,12 +448,12 @@ export class Scene extends WebGLScene {
     if (rd.draw_surf || rd.draw_vol) {
       const cmin = mix(rd.funcmin, rd2.funcmin);
       const cmax = mix(rd.funcmax, rd2.funcmax);
-      this.gui_status_default.Colormap.min = cmin;
-      this.gui_status_default.Colormap.max = cmax;
+      this.gui.settings_default.Colormap.min = cmin;
+      this.gui.settings_default.Colormap.max = cmax;
 
       if (this.gui_status.autoscale) {
-        this.gui_status.Colormap.min = cmin;
-        this.gui_status.Colormap.max = cmax;
+        this.gui.settings.Colormap.min = cmin;
+        this.gui.settings.Colormap.max = cmax;
         this.gui.c_cmin.updateDisplay();
         this.gui.c_cmax.updateDisplay();
       }
@@ -925,18 +651,18 @@ export class Scene extends WebGLScene {
   }
 
   setClippingPlane() {
-    const { gui_status, uniforms } = this;
+    const {
+      gui: {
+        settings: { deformation, Clipping },
+      },
+      uniforms,
+    } = this;
 
     const three_clipping_plane = this.three_clipping_plane;
-    three_clipping_plane.normal.set(
-      gui_status.Clipping.x,
-      gui_status.Clipping.y,
-      gui_status.Clipping.z
-    );
+    three_clipping_plane.normal.set(Clipping.x, Clipping.y, Clipping.z);
     three_clipping_plane.normal.normalize();
     three_clipping_plane.constant =
-      gui_status.Clipping.dist -
-      three_clipping_plane.normal.dot(this.mesh_center);
+      Clipping.dist - three_clipping_plane.normal.dot(this.mesh_center);
 
     this.clipping_plane.set(
       three_clipping_plane.normal.x,
@@ -948,21 +674,20 @@ export class Scene extends WebGLScene {
 
     const world_clipping_plane = three_clipping_plane.clone();
 
-    world_clipping_plane.constant = gui_status.Clipping.dist;
+    world_clipping_plane.constant = Clipping.dist;
     world_clipping_plane.applyMatrix4(this.pivot.matrix);
 
-    uniforms.do_clipping.value = gui_status.Clipping.enable;
+    uniforms.do_clipping.value = Clipping.enable;
 
     if (this.have_deformation || this.have_z_deformation)
-      uniforms.deformation.value = gui_status.deformation;
+      uniforms.deformation.value = deformation;
 
-    if (gui_status.Clipping.enable)
-      this.renderer.clippingPlanes = [world_clipping_plane];
+    if (Clipping.enable) this.renderer.clippingPlanes = [world_clipping_plane];
   }
 
   render() {
     const now = new Date().getTime();
-    const frame_time = 0.001 * (new Date().getTime() - this.last_frame_time);
+    const frame_time = 0.001 * (new Date().getTime() - now);
 
     this.requestId = 0;
 
@@ -1009,23 +734,6 @@ export class Scene extends WebGLScene {
 
     this.renderObjects('overlay');
 
-    if (gui_status.Complex.animate) {
-      gui_status.Complex.phase += frame_time * gui_status.Complex.speed;
-      if (gui_status.Complex.phase > 2 * Math.PI)
-        gui_status.Complex.phase -= 2 * Math.PI;
-
-      this.phase_controller.updateDisplay();
-      this.animate();
-    }
-    if (gui_status.Multidim.animate) {
-      gui_status.Multidim.t += frame_time * gui_status.Multidim.speed;
-      if (gui_status.Multidim.t > this.render_data.multidim_data.length)
-        gui_status.Multidim.t = 0.0;
-
-      this.multidim_controller.updateDisplay();
-      this.multidim_controller.__onChange();
-      this.animate();
-    }
     this.last_frame_time = now;
     this.handleEvent('afterrender', [this, frame_time]);
   }
