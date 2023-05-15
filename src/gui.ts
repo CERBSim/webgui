@@ -112,6 +112,8 @@ export class GuiSettings {
     },
   };
 
+  Objects: { [key: string]: boolean } = {};
+
   axes_labels: string[] = ['X', 'Y', 'Z'];
 
   clone(): GuiSettings {
@@ -149,6 +151,7 @@ export class GUI extends dat.GUI {
   gui_functions;
   gui_colormap;
   gui_misc;
+  gui_objects;
   c_autoscale;
   c_eval;
   c_cmin;
@@ -196,11 +199,14 @@ export class GUI extends dat.GUI {
     this.settings = settings;
     this.gui_functions = { ...gui_functions };
 
+    this.initFunctions();
+    this.initObjects();
+    this.initColormap();
+    this.initClipping();
     this.initComplex();
     this.initMultidim();
-    this.initColormap();
     this.initDeformation();
-    this.initClipping();
+    this.initVectors();
     this.initMisc();
 
     scene.on('afterrender', (_, frame_time: number) => {
@@ -246,6 +252,11 @@ export class GUI extends dat.GUI {
         folder.__controllers[i].updateDisplay();
     }
     this.onchange();
+  }
+
+  initObjects() {
+    this.gui_objects = this.addFolder('Objects');
+    this.gui_objects.open();
   }
 
   initColormap() {
@@ -407,7 +418,7 @@ export class GUI extends dat.GUI {
 
   initFunctions() {
     const { gui_functions } = this;
-    gui_functions['reset'] = () => {
+    gui_functions['Reset'] = () => {
       this.scene.controls.reset();
     };
     for (const name in gui_functions)

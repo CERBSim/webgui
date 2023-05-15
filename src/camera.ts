@@ -297,7 +297,7 @@ export class CameraControls extends THREE.EventDispatcher {
     this.mode = null;
     this.is_moving = false;
 
-    const settings = this.scene.gui_status.Misc;
+    const settings = this.scene.gui.settings.Misc;
     if (settings.fast_draw && this.subdivision) {
       settings.subdivision = this.subdivision;
       this.subdivision = null;
@@ -321,7 +321,7 @@ export class CameraControls extends THREE.EventDispatcher {
     if (this.mode === null) return;
 
     if (!this.did_move) {
-      const settings = this.scene.gui_status.Misc;
+      const settings = this.scene.gui.settings.Misc;
       if (settings.fast_draw) {
         this.subdivision = settings.subdivision;
         settings.subdivision = 1;
@@ -339,7 +339,7 @@ export class CameraControls extends THREE.EventDispatcher {
       this.panObject(new THREE.Vector3(0, -1, 0), 0.004 * event.movementY);
     }
     if (this.mode == 'move_clipping_plane') {
-      this.scene.gui_status.Clipping.dist +=
+      this.scene.gui.settings.Clipping.dist +=
         0.0001 * event.movementY * this.scene.mesh_radius;
       super.dispatchEvent(changeEvent);
     }

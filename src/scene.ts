@@ -59,12 +59,9 @@ export class Scene extends WebGLScene {
   light_dir: THREE.Vector3;
   event_handlers;
 
-  gui;
-  gui_status;
-  gui_objects;
-  gui_widgets;
-  gui_container;
-  uniforms;
+  gui: GUI;
+  gui_objects: { [key: string]: RenderObject };
+  uniforms: { [key: string]: THREE.IUniform };
 
   center_tag;
   render_objects = [];
@@ -191,10 +188,11 @@ export class Scene extends WebGLScene {
     this.render_objects.push(object);
     // if (object.three_object) this.pivot.add(object.three_object);
     const name = object.name;
-    if (name && !(name in this.gui_status.Objects)) {
+    const objects = this.gui.settings.Objects;
+    if (name && !(name in objects)) {
       const animate = () => this.animate();
-      this.gui_status.Objects[name] = visible;
-      this.gui_objects.add(this.gui_status.Objects, name).onChange(animate);
+      objects[name] = visible;
+      this.gui.gui_objects.add(objects, name).onChange(animate);
     }
     for (const mode of object.render_modes) {
       if (!(mode in this.render_objects_per_mode)) {
@@ -332,14 +330,8 @@ export class Scene extends WebGLScene {
     );
 
     this.gui = gui;
-    this.gui_status = gui.settings;
-    const gui_status = this.gui_status;
-    gui_status.Objects = {};
-    this.gui_objects = gui.addFolder('Objects');
-    this.gui_objects.open();
 
     llog.info('GUI', gui);
-    llog.info('gui_status', gui_status);
 
     this.addRenderObject(
       new Colorbar(this.render_data, this.uniforms, [], this.container)
@@ -409,7 +401,7 @@ export class Scene extends WebGLScene {
     // for some reason, stuff is only rendered correctly after 2 render calls...
     setTimeout(() => {
       this.onResize(), 1;
-      setTimeout(() => this.animate(), 1);
+      setTimeout(animate, 1);
     });
   }
 
@@ -451,7 +443,7 @@ export class Scene extends WebGLScene {
       this.gui.settings_default.Colormap.min = cmin;
       this.gui.settings_default.Colormap.max = cmax;
 
-      if (this.gui_status.autoscale) {
+      if (this.gui.settings.autoscale) {
         this.gui.settings.Colormap.min = cmin;
         this.gui.settings.Colormap.max = cmax;
         this.gui.c_cmin.updateDisplay();
@@ -539,11 +531,10 @@ export class Scene extends WebGLScene {
       this.renderer.setRenderTarget(render_target);
       this.renderer.setClearColor(new THREE.Color(-1.0, -1.0, -1.0));
       this.renderer.clear(true, true, true);
-      this.uniforms.line_thickness.value =
-        this.gui_status.Misc.line_thickness * 4;
+      const Misc = this.gui.settings.Misc;
+      this.uniforms.line_thickness.value = Misc.line_thickness * 4;
       this.renderer.render(this.pivot, this.camera);
-      this.uniforms.line_thickness.value =
-        this.gui_status.Misc.line_thickness / h;
+      this.uniforms.line_thickness.value = Misc.line_thickness / h;
       const gl = this.context;
       this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
       // console.log("pixels", pixels);
@@ -637,13 +628,13 @@ export class Scene extends WebGLScene {
       context: this.context,
       clipping_plane: this.three_clipping_plane,
       controls: this.controls,
-      gui_status: this.gui_status,
+      gui_status: this.gui.settings,
       mode,
       renderer: this.renderer,
     };
 
     if (mode == 'locate') this.uniforms.function_mode.value = 8;
-    else this.uniforms.function_mode.value = parseInt(this.gui_status.eval);
+    else this.uniforms.function_mode.value = this.gui.settings.eval;
 
     for (const obj of this.render_objects_per_mode[mode]) {
       obj.render(data);
@@ -690,33 +681,35 @@ export class Scene extends WebGLScene {
     const frame_time = 0.001 * (new Date().getTime() - now);
 
     this.requestId = 0;
+    const settings = this.gui.settings;
+    const { Colormap, Light, Misc, Complex } = settings;
 
     if (this.ortho_camera === undefined) return; // not fully initialized yet
 
     this.handleEvent('beforerender', [this, frame_time]);
 
-    const { gui_status, uniforms } = this;
+    const { uniforms } = this;
 
     const h = this.renderer.domElement.height;
-    uniforms.line_thickness.value = gui_status.Misc.line_thickness / h;
+    uniforms.line_thickness.value = Misc.line_thickness / h;
 
     this.setClippingPlane();
 
-    if (gui_status.Colormap.ncolors) {
-      uniforms.colormap_min.value = gui_status.Colormap.min;
-      uniforms.colormap_max.value = gui_status.Colormap.max;
+    if (Colormap.ncolors) {
+      uniforms.colormap_min.value = Colormap.min;
+      uniforms.colormap_max.value = Colormap.max;
     }
 
     if (this.is_complex) {
-      uniforms.complex_scale.value.x = Math.cos(-gui_status.Complex.phase);
-      uniforms.complex_scale.value.y = Math.sin(-gui_status.Complex.phase);
+      uniforms.complex_scale.value.x = Math.cos(-Complex.phase);
+      uniforms.complex_scale.value.y = Math.sin(-Complex.phase);
     }
 
-    uniforms.function_mode.value = parseInt(gui_status.eval);
-    uniforms.light_mat.value.x = gui_status.Light.ambient;
-    uniforms.light_mat.value.y = gui_status.Light.diffuse;
-    uniforms.light_mat.value.z = gui_status.Light.shininess;
-    uniforms.light_mat.value.w = gui_status.Light.specularity;
+    uniforms.function_mode.value = settings.eval;
+    uniforms.light_mat.value.x = Light.ambient;
+    uniforms.light_mat.value.y = Light.diffuse;
+    uniforms.light_mat.value.z = Light.shininess;
+    uniforms.light_mat.value.w = Light.specularity;
 
     this.renderer.setRenderTarget(null);
     this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
