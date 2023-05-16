@@ -1,8 +1,34 @@
+import * as THREE from 'three';
+import * as dat from 'dat.gui';
+
+import * as axes from './axes';
+import * as camera from './camera';
+import * as colormap from './colormap';
+import * as edges from './edges';
+import * as gui from './gui';
+import * as label from './label';
+import * as mesh from './mesh';
+import * as render_object from './render_object';
+import * as utils from './utils';
+
+const modules = {
+  axes,
+  camera,
+  colormap,
+  edges,
+  gui,
+  label,
+  mesh,
+  render_object,
+  utils,
+  dat,
+  THREE,
+};
+
 import { WebGLScene, log, unpackIndexedData } from './utils';
 
 import { RenderObject, extractData } from './render_object';
 import { Axes } from './axes';
-import * as dat from 'dat.gui';
 
 import {
   MeshFunctionObject,
@@ -23,8 +49,6 @@ import { CameraControls } from './camera';
 
 import { Label3D } from './label';
 import { GUI } from './gui';
-
-import * as THREE from 'three';
 
 import './styles.css';
 
@@ -395,7 +419,7 @@ export class Scene extends WebGLScene {
     console.log('Scene init done', this);
     if (render_data.on_init) {
       const on_init = Function('scene', 'render_data', render_data.on_init);
-      on_init(this, render_data);
+      on_init(this, render_data, modules);
     }
     llog.release();
     // for some reason, stuff is only rendered correctly after 2 render calls...
