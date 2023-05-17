@@ -135,7 +135,14 @@ export class MeshFunctionObject extends RenderObject {
       return new THREE.InstancedBufferAttribute(vals, ncomps);
     };
 
-    for (const i in names) geo.setAttribute(names[i], get_values(i, 4));
+    for (const i in names)
+      geo.setAttribute(
+        names[i],
+        get_values(
+          i,
+          names[i].startsWith('p') || names[i].startsWith('vec') ? 4 : 2
+        )
+      );
 
     if (data.have_normals)
       for (let i = 0; i < 3; i++)
@@ -430,11 +437,6 @@ export class ClippingVectorsObject extends RenderObject {
 
     this.uniforms.vectors_offset.value = gui_status.Vectors.offset;
     this.uniforms.grid_size.value = gui_status.Vectors.grid_size;
-    if (gui_status.Misc.subdivision !== undefined) {
-      const sd = gui_status.Misc.subdivision;
-      this.uniforms.n_segments.value = sd;
-      this.geometry.setDrawRange(0, 6 * sd * sd * sd);
-    }
     this.three_object.matrixWorld.copy(controls.mat);
     renderer.render(this.three_object, camera);
   }
@@ -500,10 +502,11 @@ export class ClippingVectorsObject extends RenderObject {
     renderer.setRenderTarget(null);
     cf.uniforms.function_mode.value = function_mode;
     cf.three_object.visible = cf_visible;
+    this.plane.copy(clipping_plane);
   }
 
   updateGridsize({ gui_status }) {
-    if (this.grid_size == gui_status.Vectors.grid_size) return;
+    if (this.grid_size === gui_status.Vectors.grid_size) return;
     const n = gui_status.Vectors.grid_size;
     this.grid_size = n;
     this.buffer_texture.setSize(n, n);
