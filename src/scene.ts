@@ -11,7 +11,7 @@ import * as mesh from './mesh';
 import * as render_object from './render_object';
 import * as utils from './utils';
 
-const modules = {
+const imported_modules = {
   axes,
   camera,
   colormap,
@@ -254,7 +254,6 @@ export class Scene extends WebGLScene {
 
     this.render_objects = [];
 
-    this.last_frame_time = new Date().getTime();
     this.render_data = render_data;
     this.funcdim = render_data.funcdim;
     this.is_complex = render_data.is_complex;
@@ -355,8 +354,6 @@ export class Scene extends WebGLScene {
 
     this.gui = gui;
 
-    llog.info('GUI', gui);
-
     this.addRenderObject(
       new Colorbar(this.render_data, this.uniforms, [], this.container)
     );
@@ -367,7 +364,7 @@ export class Scene extends WebGLScene {
       this.addRenderObject(new ThickEdgesObject(render_data, uniforms));
 
     if (this.have_z_deformation || this.have_deformation)
-      uniforms.deformation = new THREE.Uniform(gui.settings.deformation);
+      uniforms.deformation = new THREE.Uniform(0);
 
     if (render_data.is_complex)
       uniforms.complex_scale = new THREE.Uniform(new THREE.Vector2(1, 0));
@@ -411,17 +408,28 @@ export class Scene extends WebGLScene {
       });
     }
 
+    llog.info('GUI', gui);
+
+    this.last_frame_time = new Date().getTime();
     this.controls = new CameraControls(this, this.renderer.domElement);
     this.controls.addEventListener('change', animate);
 
     this.updateRenderData(render_data);
+    if (render_data.gui_settings)
+      this.gui.setGuiSettings(render_data.gui_settings);
+    if (render_data.settings) this.gui.setGuiSettings(render_data.settings);
 
     console.log('Scene init done', this);
-    if (render_data.on_init) {
-      const on_init = Function('scene', 'render_data', render_data.on_init);
-      on_init(this, render_data, modules);
-    }
     llog.release();
+    if (render_data.on_init) {
+      const on_init = Function(
+        'scene',
+        'render_data',
+        'modules',
+        render_data.on_init
+      );
+      on_init(this, render_data, imported_modules);
+    }
     // for some reason, stuff is only rendered correctly after 2 render calls...
     setTimeout(() => {
       this.onResize(), 1;
@@ -702,7 +710,7 @@ export class Scene extends WebGLScene {
 
   render() {
     const now = new Date().getTime();
-    const frame_time = 0.001 * (new Date().getTime() - now);
+    const frame_time = 0.001 * (now - this.last_frame_time);
 
     this.requestId = 0;
     const settings = this.gui.settings;

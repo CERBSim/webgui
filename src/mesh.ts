@@ -69,7 +69,6 @@ export class MeshFunctionObject extends RenderObject {
     this.three_object.matrixWorldAutoUpdate = false;
     this.three_object.name = data.name;
     this.name = 'Surface';
-    this.data = data;
     this.uniforms = uniforms;
     this.geometry = geo;
   }
@@ -141,8 +140,10 @@ export class MeshFunctionObject extends RenderObject {
     if (data.have_normals)
       for (let i = 0; i < 3; i++)
         geo.setAttribute('n' + i, get_values(3 + i, 3));
+
+    geo._maxInstanceCount = readB64(pdata[0]).length / 4;
+    geo.instanceCount = geo._maxInstanceCount;
     geo.boundingSphere = new THREE.Sphere(data.mesh_center, data.mesh_radius);
-    geo.instanceCount = readB64(pdata[0]).length / 4;
   }
 }
 
@@ -222,7 +223,8 @@ export class WireframeObject extends RenderObject {
       for (let i = 0; i < vnames.length; i++)
         geo.setAttribute(vnames[i], get_values(o + 1 + i, 2));
 
-    geo.instanceCount = readB64(pdata[0]).length / 4;
+    geo._maxInstanceCount = readB64(pdata[0]).length / 4;
+    geo.instanceCount = geo._maxInstanceCount;
     geo.boundingSphere = new THREE.Sphere(data.mesh_center, data.mesh_radius);
   }
 }

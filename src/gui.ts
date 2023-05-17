@@ -228,9 +228,6 @@ export class GUI extends dat.GUI {
       if (settings.Complex.animate || settings.Multidim.animate)
         this.onchange();
     });
-
-    if (data.gui_settings) this.setGuiSettings(data.gui_settings);
-    if (data.settings) this.setGuiSettings(data.settings);
   }
 
   getGuiSettings() {

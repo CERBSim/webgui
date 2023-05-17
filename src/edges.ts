@@ -88,7 +88,8 @@ export class ThickEdgesObject extends RenderObject {
     for (let i = 0; i < o + 1; i++)
       geo.setAttribute(pnames[i], get_values(i, 4));
 
-    geo.instanceCount = readB64(pdata[0]).length / 4;
+    geo._maxInstanceCount = readB64(pdata[0]).length / 4;
+    geo.instanceCount = geo._maxInstanceCount;
     geo.boundingSphere = new THREE.Sphere(data.mesh_center, data.mesh_radius);
   }
 }
@@ -106,7 +107,7 @@ export class FieldLinesObject extends RenderObject {
     geo.setAttribute('normal', cyl.getAttribute('normal'));
     geo.setAttribute('uv', cyl.getAttribute('uv'));
 
-    this.uniforms.thickness = new THREE.Uniform(data.thickness);
+    this.uniforms.thickness = new THREE.Uniform(this.data.thickness);
     const defines = {};
     const material = new THREE.RawShaderMaterial({
       vertexShader: getShader('fieldlines.vert', defines),
@@ -148,9 +149,9 @@ export class LinesObject extends RenderObject {
 
     geo.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute(data.position, 3)
+      new THREE.Float32BufferAttribute(this.data.position, 3)
     );
-    const color = data.color || 0x000000;
+    const color = this.data.color || 0x000000;
 
     const material = new THREE.LineBasicMaterial({ color });
 
@@ -173,7 +174,7 @@ export class PointsObject extends RenderObject {
 
   constructor(data, uniforms, path) {
     super(data, uniforms, path);
-    const color = new THREE.Color(data.color || 0x808080);
+    const color = new THREE.Color(this.data.color || 0x808080);
     const n = 101;
     const tdata = new Uint8Array(4 * n * n);
     for (let i = 0; i < n; i++)
@@ -190,21 +191,27 @@ export class PointsObject extends RenderObject {
         }
       }
 
-    const texture = new THREE.DataTexture(tdata, n, n, THREE.RGBAFormat);
+    const texture = new THREE.DataTexture(
+      tdata,
+      n,
+      n,
+      THREE.RGBAFormat,
+      THREE.UnsignedByteType
+    );
+    texture.needsUpdate = true;
     const geo = new THREE.BufferGeometry();
 
     geo.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute(data.position, 3)
+      new THREE.Float32BufferAttribute(this.data.position, 3)
     );
-    const size = data.size || 15;
+    const size = this.data.size || 15;
 
     const material = new THREE.PointsMaterial({
       size,
       sizeAttenuation: false,
       map: texture,
       alphaTest: 0.5,
-      transparent: true,
     });
 
     this.three_object = new THREE.Points(geo, material);
