@@ -82,6 +82,7 @@ export class Scene extends WebGLScene {
   world_clipping_plane: THREE.Plane;
   light_dir: THREE.Vector3;
   event_handlers;
+  widget;
 
   gui: GUI;
   gui_objects: { [key: string]: RenderObject };
@@ -125,7 +126,7 @@ export class Scene extends WebGLScene {
   version_object;
   index_render_target;
 
-  constructor() {
+  constructor(widget = undefined) {
     super();
 
     for (const mode of this.render_modes)
@@ -134,6 +135,7 @@ export class Scene extends WebGLScene {
     this.have_webgl2 = false;
 
     this.event_handlers = {};
+    this.widget = widget;
   }
 
   on(event_name, handler) {
@@ -548,10 +550,7 @@ export class Scene extends WebGLScene {
       });
       const h = this.renderer.domElement.height;
 
-      // render face index to texture (for mouse selection)
-      const function_mode = this.uniforms.function_mode.value;
-      this.uniforms.function_mode.value = 7;
-      // render again to get function value (face index for mesh rendering)
+      // render to get function value (face index for mesh rendering)
       this.camera.setViewOffset(
         this.renderer.domElement.width,
         this.renderer.domElement.height,
@@ -565,11 +564,11 @@ export class Scene extends WebGLScene {
       this.renderer.clear(true, true, true);
       const Misc = this.gui.settings.Misc;
       this.uniforms.line_thickness.value = Misc.line_thickness * 4;
-      this.renderer.render(this.pivot, this.camera);
+      // this.renderer.render(this.pivot, this.camera);
+      this.renderObjects('select');
       this.uniforms.line_thickness.value = Misc.line_thickness / h;
       const gl = this.context;
       this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
-      // console.log("pixels", pixels);
       index = Math.round(pixels[1]);
       dim = Math.round(pixels[0]);
       if (index >= 0 && dim > 0) {
@@ -604,7 +603,6 @@ export class Scene extends WebGLScene {
       }
 
       this.camera.clearViewOffset();
-      this.uniforms.function_mode.value = function_mode;
     }
     return { dim, index };
   }
@@ -666,6 +664,7 @@ export class Scene extends WebGLScene {
     };
 
     if (mode == 'locate') this.uniforms.function_mode.value = 8;
+    else if (mode === 'select') this.uniforms.function_mode.value = 7;
     else this.uniforms.function_mode.value = this.gui.settings.eval;
 
     for (const obj of this.render_objects_per_mode[mode]) {

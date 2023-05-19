@@ -69,6 +69,7 @@ export class CameraControls extends THREE.EventDispatcher {
       false
     );
 
+    this.domElement.addEventListener('click', (e) => this.onClick(e), false);
     // this.domElement.addEventListener( 'mouseup', onMouseUp, false );
     window.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
     this.domElement.addEventListener(
@@ -293,6 +294,18 @@ export class CameraControls extends THREE.EventDispatcher {
     event.stopPropagation();
   }
 
+  async onClick(event) {
+    event.preventDefault();
+    const rect = this.domElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const { dim, index } = await this.scene.getMeshIndex(x, y);
+    if (index >= 0 && dim > 0)
+      this.scene.handleEvent('select', [{ x, y, dim, index }]);
+    super.dispatchEvent(changeEvent);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async onMouseUp(event) {
     this.mode = null;
     this.is_moving = false;
@@ -302,18 +315,6 @@ export class CameraControls extends THREE.EventDispatcher {
       settings.subdivision = this.subdivision;
       this.subdivision = null;
     }
-
-    if (!this.did_move && this.onSelect) {
-      event.preventDefault();
-      const rect = this.domElement.getBoundingClientRect();
-      const index = await this.scene.getMeshIndex(
-        event.clientX - rect.left,
-        event.clientY - rect.top
-      );
-      this.onSelect(index, event);
-      super.dispatchEvent(changeEvent);
-    }
-
     if (this.did_move) super.dispatchEvent(changeEvent);
   }
 
@@ -448,5 +449,6 @@ export class CameraControls extends THREE.EventDispatcher {
       this.center.copy(p);
       this.updateCenter();
     }
+    this.scene.handleEvent('dblclick', [event, p]);
   }
 }
