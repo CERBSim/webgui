@@ -208,6 +208,7 @@ export class GUI extends dat.GUI {
     this.initDeformation();
     this.initVectors();
     this.initMisc();
+    this.initLight();
 
     scene.on('afterrender', (_, frame_time: number) => {
       if (settings.Complex.animate) {
