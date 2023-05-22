@@ -236,6 +236,16 @@ export class Scene extends WebGLScene {
     this.container.appendChild(this.version_object);
 
     window.addEventListener('resize', () => this.onResize(), false);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting === true) this.handleEvent('visible', []);
+        else this.handleEvent('hidden', []);
+      },
+      { threshold: [0] }
+    );
+
+    observer.observe(element);
+    this.on('visible', () => this.animate());
   }
 
   initRenderData(render_data) {
