@@ -372,10 +372,10 @@ export class GUI extends dat.GUI {
   initLight() {
     const light = this.settings.Light;
     const gui_light = this.addFolder('Light');
-    gui_light.add(light, 'ambient', 0.0, 1.0).onChange(onchange);
-    gui_light.add(light, 'diffuse', 0.0, 1.0).onChange(onchange);
-    gui_light.add(light, 'shininess', 0.0, 100.0).onChange(onchange);
-    gui_light.add(light, 'specularity', 0.0, 1.0).onChange(onchange);
+    gui_light.add(light, 'ambient', 0.0, 1.0).onChange(this.onchange);
+    gui_light.add(light, 'diffuse', 0.0, 1.0).onChange(this.onchange);
+    gui_light.add(light, 'shininess', 0.0, 100.0).onChange(this.onchange);
+    gui_light.add(light, 'specularity', 0.0, 1.0).onChange(this.onchange);
   }
   initMisc() {
     const misc = this.settings.Misc;
@@ -460,24 +460,26 @@ export class GUI extends dat.GUI {
         real: 5,
         imag: 6,
         norm: 3,
-      }).onChange(onchange);
+      });
 
       const cgui = this.addFolder('Complex');
       this.phase_controller = cgui
         .add(settings.Complex, 'phase', 0, 2 * Math.PI, 0.001)
-        .onChange(onchange);
+        .onChange(this.onchange);
       cgui.add(settings.Complex, 'animate').onChange(() => {
         scene.last_frame_time = new Date().getTime();
         this.onchange();
       });
-      cgui.add(settings.Complex, 'speed', 0.0, 10, 0.0001).onChange(onchange);
+      cgui
+        .add(settings.Complex, 'speed', 0.0, 10, 0.0001)
+        .onChange(this.onchange);
     } else if (data.funcdim == 2) {
       settings.eval = 3;
       this.c_eval = this.add(settings, 'eval', {
         '0': 0,
         '1': 1,
         norm: 3,
-      }).onChange(onchange);
+      });
     } else if (data.funcdim == 3) {
       settings.eval = 3;
       this.c_eval = this.add(settings, 'eval', {
@@ -485,7 +487,7 @@ export class GUI extends dat.GUI {
         '1': 1,
         '2': 2,
         norm: 3,
-      }).onChange(onchange);
+      });
     }
 
     if (this.c_eval) {
@@ -495,6 +497,7 @@ export class GUI extends dat.GUI {
       }
       this.c_eval.onChange(() => {
         if (settings.autoscale) this.updateColormapToAutoscale();
+        else this.onchange();
       });
     }
   }
@@ -551,7 +554,7 @@ export class GUI extends dat.GUI {
         scene.last_frame_time = new Date().getTime();
         this.onchange();
       });
-      gui_md.add(settings, 'speed', 0.0, 10, 0.001).onChange(onchange);
+      gui_md.add(settings, 'speed', 0.0, 10, 0.001).onChange(this.onchange);
     } else {
       this.add(settings, 'multidim', 0, md, 1).onChange(() => {
         const n = settings.multidim;
