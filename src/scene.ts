@@ -102,23 +102,18 @@ export class Scene extends WebGLScene {
   overlay_objects = [];
 
   is_complex: boolean;
-  trafo;
+  trafo: THREE.Vector2;
   mouse: THREE.Vector2;
 
   last_frame_time: number;
 
-  multidim_controller;
-
   mesh_center: THREE.Vector3;
   mesh_radius: number;
-
-  pivot: THREE.Group;
-  // overlay_pivot: THREE.Group;
 
   have_deformation: boolean;
   have_z_deformation: boolean;
 
-  controls;
+  controls : CameraControls;
 
   funcdim: number;
   mesh_only: boolean;
@@ -212,7 +207,6 @@ export class Scene extends WebGLScene {
 
   addRenderObject(object: RenderObject, visible = true) {
     this.render_objects.push(object);
-    // if (object.three_object) this.pivot.add(object.three_object);
     const name = object.name;
     const objects = this.gui.settings.Objects;
     if (name && !(name in objects)) {
@@ -299,11 +293,6 @@ export class Scene extends WebGLScene {
     this.tooltip.style.top = '10px';
     this.tooltip.style.left = '10px';
     this.tooltip.style.visibility = 'hidden';
-
-    this.pivot = new THREE.Group();
-    this.pivot.matrixAutoUpdate = false;
-    // this.overlay_pivot = new THREE.Group();
-    // this.overlay_pivot.matrixAutoUpdate = false;
 
     const aspect = this.element.offsetWidth / this.element.offsetHeight;
     const near = 1;
@@ -424,7 +413,7 @@ export class Scene extends WebGLScene {
 
     this.last_frame_time = new Date().getTime();
     this.controls = new CameraControls(this, this.renderer.domElement);
-    this.controls.addEventListener('change', animate);
+    (this.controls as THREE.EventDispatcher).addEventListener('change', animate);
 
     this.updateRenderData(render_data);
     if (render_data.gui_settings)
@@ -469,14 +458,8 @@ export class Scene extends WebGLScene {
     const t1 = 1.0 - t;
     const mix = (a, b) => t1 * a + t * b;
 
-    if (rd2.objects)
-      for (let i = 0; i < this.render_objects.length; i++)
-        if (this.render_objects[i] != null)
-          this.render_objects[i].updateRenderData(
-            rd.objects[i],
-            rd2.objects[i],
-            t
-          );
+    for (let i = 0; i < this.render_objects.length; i++)
+      this.render_objects[i].updateRenderData( rd, rd2, t);
 
     if (rd.draw_surf || rd.draw_vol) {
       const cmin = mix(rd.funcmin, rd2.funcmin);
@@ -499,7 +482,6 @@ export class Scene extends WebGLScene {
 
   setCenterTag(position = null) {
     if (this.center_tag != null) {
-      this.pivot.remove(this.center_tag);
       this.center_tag = null;
     }
     if (position != null) {
@@ -534,12 +516,11 @@ export class Scene extends WebGLScene {
       });
 
       this.center_tag = new THREE.Sprite(material);
-      const s = 0.01 / this.controls.scale;
+      const s = 0.01 / this.controls.mesh_radius;
 
       this.center_tag.scale.set(s, s, s);
       this.center_tag.position.copy(position);
       this.center_tag.renderOrder = 1;
-      this.pivot.add(this.center_tag);
     }
   }
 
@@ -571,7 +552,6 @@ export class Scene extends WebGLScene {
       this.renderer.clear(true, true, true);
       const Misc = this.gui.settings.Misc;
       this.uniforms.line_thickness.value = Misc.line_thickness * 4;
-      // this.renderer.render(this.pivot, this.camera);
       this.renderObjects('select');
       this.uniforms.line_thickness.value = Misc.line_thickness / h;
       const gl = this.context;
@@ -704,7 +684,6 @@ export class Scene extends WebGLScene {
     const world_clipping_plane = three_clipping_plane.clone();
 
     world_clipping_plane.constant = Clipping.dist;
-    world_clipping_plane.applyMatrix4(this.pivot.matrix);
 
     uniforms.do_clipping.value = Clipping.enable;
 

@@ -87,11 +87,14 @@ export class MeshFunctionObject extends RenderObject {
   }
 
   updateRenderData(data, data2, t) {
-    this.data = this.extractData(data);
+    const do_interpolate = t !== undefined;
+
+    data = this.extractData(data);
+    if(do_interpolate)
+      data2 = this.extractData(data2);
     const geo = this.geometry;
     const pdata = data.Bezier_trig_points;
-    const pdata2 = data2 && data2.Bezier_trig_points;
-    const do_interpolate = t !== undefined;
+    const pdata2 = do_interpolate ? data2.Bezier_trig_points : null;
     const order = data.order2d;
 
     let names;
@@ -201,7 +204,7 @@ export class WireframeObject extends RenderObject {
   }
 
   updateRenderData(data, data2, t) {
-    this.data = this.extractData(data);
+    data = this.extractData(data);
     data2 = data2 && this.extractData(data2);
     const geo = this.geometry;
     const pdata = data.Bezier_points;
@@ -326,7 +329,7 @@ export class ClippingFunctionObject extends RenderObject {
   }
 
   updateRenderData(data, data2, t) {
-    this.data = this.extractData(data);
+    data = this.extractData(data);
     data2 = data2 && this.extractData(data2);
     const geo = this.geometry;
     const pdata = data.points3d;

@@ -174,7 +174,7 @@ export function readB64Raw(base64) {
   if (typeof base64 == 'object') {
     switch (base64.constructor.name) {
       case 'DataView': // binary buffer (used for jupyter widgets)
-        return base64.buffer;
+        return base64.buffer.slice(0);
       default:
         return base64;
     }
@@ -266,9 +266,9 @@ export function formatTimeSpan(t) {
   return t.toFixed(4) + ' ' + unit;
 }
 
-export function mixB64(a, b, t) {
+export function mixB64(a: string, b: string, t: number) {
   const t1 = 1.0 - t;
-  const mix = (a, b) => t1 * a + t * b;
+  const mix = (a_: number, b_: number) => t1 * a_ + t * b_;
   const d1 = readB64(a);
   const d2 = readB64(b);
 

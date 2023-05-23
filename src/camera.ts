@@ -22,7 +22,6 @@ export class CameraControls extends THREE.EventDispatcher {
   scene;
   center;
   mesh_radius;
-  pivotObject;
   subdivision;
 
   onSelect = null;
@@ -60,7 +59,6 @@ export class CameraControls extends THREE.EventDispatcher {
     this.mat.makeTranslation(-this.center.x, -this.center.y, -this.center.z);
     this.mat.premultiply(new THREE.Matrix4().makeScale(s, s, s));
 
-    this.pivotObject = scene.pivot;
     this.domElement = domElement;
 
     this.domElement.addEventListener(
@@ -128,7 +126,6 @@ export class CameraControls extends THREE.EventDispatcher {
   }
 
   update() {
-    this.pivotObject.matrix.copy(this.mat);
     const rotmat = new THREE.Matrix4();
     rotmat.extractRotation(this.mat);
     super.dispatchEvent(changeEvent);
