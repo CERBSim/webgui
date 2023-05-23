@@ -90,8 +90,7 @@ export class MeshFunctionObject extends RenderObject {
     const do_interpolate = t !== undefined;
 
     data = this.extractData(data);
-    if(do_interpolate)
-      data2 = this.extractData(data2);
+    if (do_interpolate) data2 = this.extractData(data2);
     const geo = this.geometry;
     const pdata = data.Bezier_trig_points;
     const pdata2 = do_interpolate ? data2.Bezier_trig_points : null;

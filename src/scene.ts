@@ -113,7 +113,7 @@ export class Scene extends WebGLScene {
   have_deformation: boolean;
   have_z_deformation: boolean;
 
-  controls : CameraControls;
+  controls: CameraControls;
 
   funcdim: number;
   mesh_only: boolean;
@@ -413,7 +413,10 @@ export class Scene extends WebGLScene {
 
     this.last_frame_time = new Date().getTime();
     this.controls = new CameraControls(this, this.renderer.domElement);
-    (this.controls as THREE.EventDispatcher).addEventListener('change', animate);
+    (this.controls as THREE.EventDispatcher).addEventListener(
+      'change',
+      animate
+    );
 
     this.updateRenderData(render_data);
     if (render_data.gui_settings)
@@ -459,7 +462,7 @@ export class Scene extends WebGLScene {
     const mix = (a, b) => t1 * a + t * b;
 
     for (let i = 0; i < this.render_objects.length; i++)
-      this.render_objects[i].updateRenderData( rd, rd2, t);
+      this.render_objects[i].updateRenderData(rd, rd2, t);
 
     if (rd.draw_surf || rd.draw_vol) {
       const cmin = mix(rd.funcmin, rd2.funcmin);
