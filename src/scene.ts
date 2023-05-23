@@ -442,11 +442,8 @@ export class Scene extends WebGLScene {
       );
       on_init(this, render_data, imported_modules);
     }
-    // for some reason, stuff is only rendered correctly after 2 render calls...
-    setTimeout(() => {
-      this.onResize(), 1;
-      setTimeout(animate, 1);
-    });
+
+    this.onResize();
   }
 
   init(element, render_data, webgl_args = {}) {
