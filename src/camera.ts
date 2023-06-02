@@ -24,8 +24,6 @@ export class CameraControls extends THREE.EventDispatcher {
   mesh_radius;
   subdivision;
 
-  onSelect = null;
-
   mat = new THREE.Matrix4();
   mode = null;
   rotation_step_degree = 0.05;
@@ -293,6 +291,8 @@ export class CameraControls extends THREE.EventDispatcher {
 
   async onClick(event) {
     event.preventDefault();
+    if(this.did_move)
+      return;
     const rect = this.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
