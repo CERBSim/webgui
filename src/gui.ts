@@ -305,10 +305,10 @@ export class GUI extends dat.GUI {
     if (draw_surf || draw_vol) {
       const cmin = funcmin;
       const cmax = funcmax;
-      colormap.min = cmin;
-      colormap.max = cmax;
+      if (colormap.autoscale) {
+        colormap.min = cmin;
+        colormap.max = cmax;
 
-      if (settings.autoscale) {
         if (settings.eval == 3) {
           // norm of vector-valued function
           colormap.min = 0;

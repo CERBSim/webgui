@@ -291,8 +291,7 @@ export class CameraControls extends THREE.EventDispatcher {
 
   async onClick(event) {
     event.preventDefault();
-    if(this.did_move)
-      return;
+    if (this.did_move) return;
     const rect = this.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
