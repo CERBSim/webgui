@@ -394,8 +394,16 @@ export class Scene extends WebGLScene {
     if (render_data.show_wireframe && render_data.Bezier_points.length > 0)
       this.addRenderObject(new WireframeObject(render_data, uniforms, []));
 
-    if (render_data.show_mesh)
-      this.addRenderObject(new MeshFunctionObject(render_data, uniforms));
+    if (render_data.show_mesh) {
+      const mesh_function = new MeshFunctionObject(render_data, uniforms);
+      this.addRenderObject(mesh_function);
+      if (render_data.draw_surf && render_data.funcdim == 2) {
+        this.addRenderObject(
+          new ClippingVectorsObject(render_data, uniforms, [], mesh_function),
+          false
+        );
+      }
+    }
 
     if (render_data.objects) {
       render_data.objects.forEach((_, i: number) => {

@@ -364,12 +364,18 @@ export class ClippingVectorsObject extends RenderObject {
   buffer_texture: THREE.WebGLRenderTarget;
   mesh_radius: number;
   mesh_center: number;
+  mesh_dim: number;
   geometry: THREE.InstancedBufferGeometry;
   plane: THREE.Plane;
   offset: number;
   grid_size: number;
 
-  constructor(data, uniforms, path, clipping_function: ClippingFunctionObject) {
+  constructor(
+    data,
+    uniforms,
+    path,
+    clipping_function: ClippingFunctionObject | MeshFunctionObject
+  ) {
     super(data, uniforms, path);
 
     this.clipping_function = clipping_function;
@@ -387,6 +393,7 @@ export class ClippingVectorsObject extends RenderObject {
     this.plane = new THREE.Plane();
     this.offset = null;
     this.grid_size = null;
+    this.mesh_dim = data.mesh_dim;
 
     this.uniforms.clipping_plane_c = new THREE.Uniform(new THREE.Vector3());
     this.uniforms.clipping_plane_t1 = new THREE.Uniform(new THREE.Vector3());
@@ -432,7 +439,7 @@ export class ClippingVectorsObject extends RenderObject {
     const { gui_status, renderer, camera, controls } = data;
 
     if (!this.update(data)) return;
-    if (!gui_status.Clipping.enable) return;
+    if (this.mesh_dim == 3 && !gui_status.Clipping.enable) return;
 
     this.updateGridsize(data);
     this.updateClippingPlaneCamera(data);
@@ -487,7 +494,8 @@ export class ClippingVectorsObject extends RenderObject {
     if (gui_status.Misc.subdivision !== undefined) {
       const sd = gui_status.Misc.subdivision;
       cf.uniforms.n_segments.value = sd;
-      cf.geometry.setDrawRange(0, 6 * sd * sd * sd);
+      if (this.mesh_dim == 3) cf.geometry.setDrawRange(0, 6 * sd * sd * sd);
+      else cf.geometry.setDrawRange(0, 3 * sd * sd);
     }
     renderer.setRenderTarget(this.buffer_texture);
     renderer.setClearColor(new THREE.Color(0.0, 0.0, 0.0));
