@@ -424,7 +424,7 @@ export class ClippingVectorsObject extends RenderObject {
     this.three_object = new THREE.Mesh(geo, material);
     this.three_object.matrixWorldAutoUpdate = false;
     this.three_object.frustumCulled = false;
-    this.name = 'Clipping Vectors';
+    this.name = 'Vectors';
     this.geometry = geo;
 
     this.buffer_texture = new THREE.WebGLRenderTarget(1, 1, {

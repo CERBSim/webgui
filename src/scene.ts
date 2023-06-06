@@ -444,6 +444,10 @@ export class Scene extends WebGLScene {
     }
 
     this.onResize();
+    setTimeout(() => {
+      if (render_data.vectors) this.gui.settings.Objects['Vectors'] = true;
+      this.animate();
+    }, 100);
   }
 
   init(element, render_data, webgl_args = {}) {
