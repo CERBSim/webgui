@@ -259,8 +259,11 @@ export class Colorbar extends RenderObject {
     const min = this.min_;
     const inc = (this.max_ - min) / (n - 1);
     if (this.enabled)
-      for (let i = 0; i < n; i++)
-        this.labels[i].nodeValue = (min + inc * i).toPrecision(2);
+      for (let i = 0; i < n; i++) {
+        const value = min+inc*i;
+        const digits = Math.ceil((value!=0 && inc!=0) ? Math.log10(value/inc)+2 : 3);
+        this.labels[i].nodeValue = (min + inc * i).toPrecision(digits);
+    }
     else for (let i = 0; i < n; i++) this.labels[i].nodeValue = '';
   }
 
