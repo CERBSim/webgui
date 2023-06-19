@@ -242,13 +242,16 @@ export class Colorbar extends RenderObject {
   }
 
   updateTexture() {
-    if (this.mesh_only) this.setTexture(makeMeshColormapTexture(this.data));
+    if (this.mesh_only)
+      this.setTexture(makeMeshColormapTexture(this.data), true);
     else this.setTexture(makeColormapTexture(this.n_colors));
   }
 
-  setTexture(tex) {
-    this.uniforms.colormap_size.value.x = tex.image.width;
-    this.uniforms.colormap_size.value.y = tex.image.height;
+  setTexture(tex, isMeshTexture = false) {
+    if (isMeshTexture) {
+      this.uniforms.colormap_size.value.x = tex.image.width;
+      this.uniforms.colormap_size.value.y = tex.image.height;
+    }
 
     this.uniforms.tex_colormap.value = tex;
     if (!this.mesh_only) this.mesh_material.map = tex;
@@ -260,10 +263,12 @@ export class Colorbar extends RenderObject {
     const inc = (this.max_ - min) / (n - 1);
     if (this.enabled)
       for (let i = 0; i < n; i++) {
-        const value = min+inc*i;
-        const digits = Math.ceil((value!=0 && inc!=0) ? Math.log10(value/inc)+2 : 3);
+        const value = min + inc * i;
+        const digits = Math.ceil(
+          value != 0 && inc != 0 ? Math.log10(value / inc) + 2 : 3
+        );
         this.labels[i].nodeValue = (min + inc * i).toPrecision(digits);
-    }
+      }
     else for (let i = 0; i < n; i++) this.labels[i].nodeValue = '';
   }
 
