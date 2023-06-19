@@ -83,6 +83,9 @@ export class Scene extends WebGLScene {
   light_dir: THREE.Vector3;
   event_handlers;
   widget;
+  width: number;
+  height: number;
+  hidden = false;
 
   gui: GUI;
   gui_objects: { [key: string]: RenderObject };
@@ -181,8 +184,13 @@ export class Scene extends WebGLScene {
   }
 
   onResize() {
-    const w = this.element.parentNode.clientWidth;
-    const h = this.element.parentNode.clientHeight - 6;
+    if (!this.isVisible()) return;
+
+    if (!this.checkResize()) return this.animate(); // no need to resize, but trigger new frame
+
+    const { w, h } = this.calcSize();
+    this.width = w;
+    this.height = h;
 
     const aspect = w / h;
     this.ortho_camera = new THREE.OrthographicCamera(
@@ -194,14 +202,16 @@ export class Scene extends WebGLScene {
       100
     );
 
-    this.render_objects.forEach((obj) => obj.onResize(w, h));
+    this.perspective_camera.aspect = aspect;
+    this.perspective_camera.updateProjectionMatrix();
 
-    this.camera.aspect = aspect;
-    this.camera.left = -aspect;
-    this.camera.right = aspect;
+    this.orthographic_camera.aspect = aspect;
+    this.orthographic_camera.left = -aspect;
+    this.orthographic_camera.right = aspect;
+    this.orthographic_camera.updateProjectionMatrix();
     this.uniforms.aspect.value = aspect;
     this.renderer.setSize(w, h);
-    this.camera.updateProjectionMatrix();
+    this.render_objects.forEach((obj) => obj.onResize(w, h));
     this.controls.update();
   }
 
@@ -240,18 +250,13 @@ export class Scene extends WebGLScene {
     );
 
     observer.observe(element);
-    this.on('visible', () => this.animate());
-    // console.log('register event handlers');
-    // for (const key in element) {
-    //   console.log('check', key);
-    //   if (/^on/.test(key)) {
-    //     const eventType = key.substr(2);
-    //     console.log('register', eventType);
-    //     element.addEventListener(eventType, (event) =>
-    //       console.log('event', eventType)
-    //     );
-    //   }
-    // }
+    this.on('visible', () => {
+      this.hidden = false;
+      this.animate();
+    });
+    this.on('hidden', () => {
+      this.hidden = true;
+    });
   }
 
   initRenderData(render_data) {
@@ -720,34 +725,33 @@ export class Scene extends WebGLScene {
     if (Clipping.enable) this.renderer.clippingPlanes = [world_clipping_plane];
   }
 
-  isInViewport() {
-    const rect = this.element.getBoundingClientRect();
-    return (
-      rect.top >= 0 &&
-      rect.left >= 0 &&
-      rect.bottom <=
-        (window.innerHeight || document.documentElement.clientHeight) &&
-      rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
+  calcSize() {
+    const w = this.element.parentNode.clientWidth;
+    const h = this.element.parentNode.clientHeight - 6;
+    return { w, h };
+  }
+
+  isVisible() {
+    const { w, h } = this.calcSize();
+    return w > 0 && h > 0 && !this.hidden;
+  }
+
+  checkResize() {
+    const { w, h } = this.calcSize();
+    return w > 0 && h > 0 && (this.width != w || this.height != h);
   }
 
   render() {
-    const now = new Date().getTime();
-    const frame_time = 0.001 * (now - this.last_frame_time);
-    const size = new THREE.Vector2();
-    if (!this.isInViewport()) return;
-
-    {
-      this.renderer.getSize(size);
-      const viewport = new THREE.Vector4();
-      // this.renderer.getViewport(viewport);
-      const w = this.element.parentNode.clientWidth;
-      const h = this.element.parentNode.clientHeight - 6;
-      console.log('render', size, w, h, this.element.parentOffset);
-      if (w <= 0 || h <= 0) return;
+    this.requestId = 0;
+    if (!this.isVisible()) return;
+    if (this.checkResize()) {
+      this.onResize();
+      return; // resize triggers new frame
     }
 
-    this.requestId = 0;
+    const now = new Date().getTime();
+    const frame_time = 0.001 * (now - this.last_frame_time);
+
     const settings = this.gui.settings;
     const { Colormap, Light, Misc, Complex } = settings;
 
