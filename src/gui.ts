@@ -380,6 +380,7 @@ export class GUI extends dat.GUI {
   }
   initMisc() {
     const misc = this.settings.Misc;
+    console.log('misc', misc);
     const gui_misc = this.addFolder('Misc');
     gui_misc.add(misc, 'subdivision', 1, 20, 1).onChange(this.onchange);
     if (this.scene.render_data.edges.length) {
