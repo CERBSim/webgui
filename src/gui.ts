@@ -141,6 +141,33 @@ export class GuiSettings {
   }
 }
 
+function updateSettings(s) {
+  s.Colormap = {
+    autoscale: s.autoscale,
+    min: s.colormap_min,
+    max: s.colormap_max,
+    ncolors: s.colormap_ncolors,
+  };
+  s.Misc.line_thickness = s.line_thickness;
+  s.Misc.subdivision = s.subdivision;
+  s.Misc.fast_draw = s.Misc.reduce_subdivision;
+
+  delete s.subdivision;
+  delete s.autoscale;
+  delete s.colormap_min;
+  delete s.colormap_max;
+  delete s.colormap_ncolors;
+  delete s.line_thickness;
+  delete s.Misc.reduce_subdivision;
+
+  s.Objects = s.Objects ? s.Objects : {};
+  s.Objects.Edges = s.edges;
+  s.Objects.Wireframe = s.mesh;
+  s.Objects.Surface = s.elements;
+
+  return s;
+}
+
 export class GUI extends dat.GUI {
   gui: dat.GUI;
   container;
@@ -189,9 +216,10 @@ export class GUI extends dat.GUI {
     this.gui_container = gui_container;
     this.closed = true;
     const data = scene.render_data;
-
+    const s = data.gui_settings;
+    if (s.subdivision) updateSettings(s);
     const settings_default = this.settings_default;
-    settings_default.update(data.gui_settings);
+    settings_default.update(s);
     if (Math.max(data.order2d, data.order3d) <= 1)
       settings_default.Misc.subdivision = 1;
 
