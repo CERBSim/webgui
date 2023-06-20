@@ -668,8 +668,7 @@ export class Scene extends WebGLScene {
   }
 
   renderObjects(mode: string) {
-    const camera =
-      mode === 'overlay' ? this.ortho_camera : this.perspective_camera;
+    const camera = mode === 'overlay' ? this.ortho_camera : this.camera;
 
     const data = {
       camera,
