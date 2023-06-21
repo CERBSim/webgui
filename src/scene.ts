@@ -95,6 +95,7 @@ export class Scene extends WebGLScene {
   render_objects = [];
   render_objects_per_mode = {};
   render_modes: Array<string> = [
+    'update',
     'default',
     'no_clipping',
     'overlay',
@@ -785,6 +786,7 @@ export class Scene extends WebGLScene {
     this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
     this.renderer.clear(true, true, true);
 
+    this.renderObjects('update');
     this.renderObjects('default');
 
     this.renderer.clippingPlanes = [];

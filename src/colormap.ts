@@ -139,13 +139,13 @@ export class Colorbar extends RenderObject {
   enabled = true;
   min_: number;
   max_: number;
-  n_colors: bigint;
+  n_colors: number;
   label_style: string;
 
   constructor(data, global_uniforms, path = [], container) {
     super(data, global_uniforms, path);
     this.name = 'Colorbar';
-    this.render_modes = ['overlay'];
+    this.render_modes = ['overlay', 'update'];
     this.data = this.extractData(data);
     const mesh_only = this.data.funcdim == 0;
     if (mesh_only) this.enabled = false;
@@ -194,7 +194,7 @@ export class Colorbar extends RenderObject {
 
   render(data) {
     const visible = this.update(data);
-    const { gui_status } = data;
+    const { gui_status, mode } = data;
     if (
       this.min_ != gui_status.Colormap.min ||
       this.max_ != gui_status.Colormap.max ||
@@ -207,7 +207,7 @@ export class Colorbar extends RenderObject {
       if (!this.mesh_only) this.updateLabels();
     }
     this.labels_object.style.display = visible ? 'block' : 'none';
-    if (this.three_object && visible)
+    if (this.three_object && visible && mode == 'default')
       data.renderer.render(this.three_object, data.camera);
   }
 
