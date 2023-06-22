@@ -218,6 +218,7 @@ export class GUI extends dat.GUI {
     const data = scene.render_data;
     const s = data.gui_settings;
     if (s.subdivision) updateSettings(s);
+    this.setGuiSettings(s);
     const settings_default = this.settings_default;
     settings_default.update(s);
     if (Math.max(data.order2d, data.order3d) <= 1)
@@ -301,26 +302,34 @@ export class GUI extends dat.GUI {
     }
 
     if (!data.draw_vol && !data.draw_surf) return;
-    const cmin = data.funcmin;
-    const cmax = data.funcmax;
-    settings.min = cmin;
-    settings.max = cmax;
-    settings_default.min = cmin;
-    settings_default.max = cmax;
-    settings_default.autoscale = data.autoscale || false;
+    if (settings.autoscale) {
+      const cmin = data.funcmin;
+      const cmax = data.funcmax;
+      settings.min = cmin;
+      settings.max = cmax;
+      settings_default.min = cmin;
+      settings_default.max = cmax;
+    }
 
     settings.autoscale = settings_default.autoscale;
     this.c_autoscale = cmap.add(settings, 'autoscale');
     this.c_cmin = cmap.add(settings, 'min');
-    this.c_cmin.onChange(this.onchange);
+    this.c_cmin.onChange(() => {
+      settings.autoscale = false;
+      this.onchange();
+    });
     this.c_cmax = cmap.add(settings, 'max');
-    this.c_cmax.onChange(this.onchange);
-
-    this.c_autoscale.onChange((checked) => {
-      if (checked) this.updateColormapToAutoscale();
+    this.c_cmin.onChange(() => {
+      settings.autoscale = false;
+      this.onchange();
     });
 
-    if (cmax > cmin) this.setStepSize(cmin, cmax);
+    if (settings.min > settings.max)
+      this.setStepSize(settings.min, settings.max);
+
+    this.c_autoscale.onChange((checked: boolean) => {
+      if (checked) this.updateColormapToAutoscale();
+    });
 
     cmap.add(settings, 'ncolors', 2, 32, 1).onChange(this.onchange);
   }

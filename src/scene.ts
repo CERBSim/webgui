@@ -484,7 +484,8 @@ export class Scene extends WebGLScene {
       if (this.render_objects[i] != null)
         this.render_objects[i].updateRenderData(render_data);
 
-    this.gui.updateColormapToAutoscale();
+    if (this.gui.settings.Colormap.autoscale)
+      this.gui.updateColormapToAutoscale();
   }
 
   interpolateRenderData(rd, rd2, t) {
