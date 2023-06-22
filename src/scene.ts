@@ -363,6 +363,13 @@ export class Scene extends WebGLScene {
     this.center_tag = null;
 
     const animate = () => this.animate();
+
+    this.controls = new CameraControls(this, this.renderer.domElement);
+    (this.controls as THREE.EventDispatcher).addEventListener(
+      'change',
+      animate
+    );
+
     const gui = new GUI(
       this.container,
       this,
@@ -438,12 +445,6 @@ export class Scene extends WebGLScene {
     llog.info('GUI', gui);
 
     this.last_frame_time = new Date().getTime();
-    this.controls = new CameraControls(this, this.renderer.domElement);
-    (this.controls as THREE.EventDispatcher).addEventListener(
-      'change',
-      animate
-    );
-
     this.updateRenderData(render_data);
     if (render_data.gui_settings)
       this.gui.setGuiSettings(render_data.gui_settings);
