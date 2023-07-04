@@ -216,11 +216,13 @@ export class GUI extends dat.GUI {
     this.gui_container = gui_container;
     this.closed = true;
     const data = scene.render_data;
-    const s = data.gui_settings;
-    if (s.subdivision) updateSettings(s);
-    this.setGuiSettings(s);
     const settings_default = this.settings_default;
-    settings_default.update(s);
+    if (data.gui_settings) {
+      const s = data.gui_settings;
+      if (s.subdivision) updateSettings(s);
+      this.setGuiSettings(s);
+      settings_default.update(s);
+    }
     if (Math.max(data.order2d, data.order3d) <= 1)
       settings_default.Misc.subdivision = 1;
 

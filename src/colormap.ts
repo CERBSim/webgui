@@ -207,7 +207,7 @@ export class Colorbar extends RenderObject {
       if (!this.mesh_only) this.updateLabels();
     }
     this.labels_object.style.display = visible ? 'block' : 'none';
-    if (this.three_object && visible && mode == 'default')
+    if (this.three_object && visible && mode == 'overlay')
       data.renderer.render(this.three_object, data.camera);
   }
 
