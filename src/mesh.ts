@@ -450,6 +450,10 @@ export class ClippingVectorsObject extends RenderObject {
     renderer.render(this.three_object, camera);
   }
 
+  updateRenderData(data, data2, t) {
+    this.plane.negate(); // force rerending
+  }
+
   updateClippingPlaneCamera({ gui_status, clipping_plane, renderer, context }) {
     if (this.plane.equals(clipping_plane)) return;
     context.finish();
