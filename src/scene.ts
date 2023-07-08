@@ -467,6 +467,8 @@ export class Scene extends WebGLScene {
     setTimeout(() => {
       if (render_data.vectors) this.gui.settings.Objects['Vectors'] = true;
       this.animate();
+      if(render_data.fullscreen)
+        this.toggleFullscreen();
     }, 100);
   }
 
