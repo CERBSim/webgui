@@ -467,8 +467,7 @@ export class Scene extends WebGLScene {
     setTimeout(() => {
       if (render_data.vectors) this.gui.settings.Objects['Vectors'] = true;
       this.animate();
-      if(render_data.fullscreen)
-        this.toggleFullscreen();
+      if (render_data.fullscreen) this.toggleFullscreen();
     }, 100);
   }
 
@@ -488,8 +487,8 @@ export class Scene extends WebGLScene {
       if (this.render_objects[i] != null)
         this.render_objects[i].updateRenderData(render_data);
 
-    if (this.gui.settings.Colormap.autoscale)
-      this.gui.updateColormapToAutoscale();
+    if (render_data.autoscale) this.gui.updateColormapToAutoscale();
+    this.animate();
   }
 
   interpolateRenderData(rd, rd2, t) {
@@ -499,18 +498,16 @@ export class Scene extends WebGLScene {
     for (let i = 0; i < this.render_objects.length; i++)
       this.render_objects[i].updateRenderData(rd, rd2, t);
 
-    if (rd.draw_surf || rd.draw_vol) {
+    if (rd.autoscale && (rd.draw_surf || rd.draw_vol)) {
       const cmin = mix(rd.funcmin, rd2.funcmin);
       const cmax = mix(rd.funcmax, rd2.funcmax);
       this.gui.settings_default.Colormap.min = cmin;
       this.gui.settings_default.Colormap.max = cmax;
 
-      if (this.gui.settings.autoscale) {
-        this.gui.settings.Colormap.min = cmin;
-        this.gui.settings.Colormap.max = cmax;
-        this.gui.c_cmin.updateDisplay();
-        this.gui.c_cmax.updateDisplay();
-      }
+      this.gui.settings.Colormap.min = cmin;
+      this.gui.settings.Colormap.max = cmax;
+      this.gui.c_cmin.updateDisplay();
+      this.gui.c_cmax.updateDisplay();
 
       if (cmax > cmin) this.gui.setStepSize(cmin, cmax);
     }

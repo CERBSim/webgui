@@ -304,14 +304,12 @@ export class GUI extends dat.GUI {
     }
 
     if (!data.draw_vol && !data.draw_surf) return;
-    if (settings.autoscale) {
-      const cmin = data.funcmin;
-      const cmax = data.funcmax;
-      settings.min = cmin;
-      settings.max = cmax;
-      settings_default.min = cmin;
-      settings_default.max = cmax;
-    }
+    const cmin = data.funcmin;
+    const cmax = data.funcmax;
+    settings.min = cmin;
+    settings.max = cmax;
+    settings_default.min = cmin;
+    settings_default.max = cmax;
 
     settings.autoscale = settings_default.autoscale;
     this.c_autoscale = cmap.add(settings, 'autoscale');
@@ -331,6 +329,7 @@ export class GUI extends dat.GUI {
 
     this.c_autoscale.onChange((checked: boolean) => {
       if (checked) this.updateColormapToAutoscale();
+      this.onchange();
     });
 
     cmap.add(settings, 'ncolors', 2, 32, 1).onChange(this.onchange);
@@ -341,28 +340,25 @@ export class GUI extends dat.GUI {
     const { settings } = this;
     const colormap = settings.Colormap;
 
-    if (draw_surf || draw_vol) {
+    if (colormap.autoscale && (draw_surf || draw_vol)) {
       const cmin = funcmin;
       const cmax = funcmax;
-      if (colormap.autoscale) {
+      colormap.min = cmin;
+      colormap.max = cmax;
+
+      if (settings.eval == 3) {
+        // norm of vector-valued function
+        colormap.min = 0;
+        colormap.max = Math.max(Math.abs(cmin), Math.abs(cmax));
+      } else {
         colormap.min = cmin;
         colormap.max = cmax;
-
-        if (settings.eval == 3) {
-          // norm of vector-valued function
-          colormap.min = 0;
-          colormap.max = Math.max(Math.abs(cmin), Math.abs(cmax));
-        } else {
-          colormap.min = cmin;
-          colormap.max = cmax;
-        }
-        this.c_cmin.updateDisplay();
-        this.c_cmax.updateDisplay();
       }
+      this.c_cmin.updateDisplay();
+      this.c_cmax.updateDisplay();
 
       if (cmax > cmin) this.setStepSize(cmin, cmax);
     }
-    this.onchange();
   }
 
   get data() {
