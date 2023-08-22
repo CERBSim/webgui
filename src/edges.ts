@@ -3,10 +3,43 @@ import { RenderObject } from './render_object';
 
 import * as THREE from 'three';
 
+function makeEdgeColorsTexture(colors) {
+  // Drawing only a mesh -> colors are given explicitly in render data (or just use green)
+  let n_colors = colors.length;
+  const width = Math.min(n_colors, 1024);
+  const height = Math.floor((n_colors + (width - 1)) / width);
+  n_colors = width * height;
+  console.log('texture size', n_colors, width, height);
+  const colormap_data = new Float32Array(4 * n_colors);
+
+  for (let i = 0; i < 4 * n_colors; i++) {
+    if (i % 4 == 3) colormap_data[i] = 1.0;
+    else colormap_data[i] = 0.0;
+  }
+
+  for (let i = 0; i < colors.length; i++) {
+    for (let k = 0; k < 3; k++) colormap_data[4 * i + k] = colors[i][k];
+    colormap_data[4 * i + 3] = colors[i].length > 3 ? colors[i][3] : 1.0;
+  }
+  const colormap_texture = new THREE.DataTexture(
+    colormap_data,
+    width,
+    height,
+    THREE.RGBAFormat,
+    THREE.FloatType
+  );
+  colormap_texture.minFilter = THREE.NearestFilter;
+  colormap_texture.magFilter = THREE.NearestFilter;
+  colormap_texture.generateMipmaps = false;
+  colormap_texture.needsUpdate = true;
+  return colormap_texture;
+}
+
 export class ThickEdgesObject extends RenderObject {
   have_deformation: boolean;
   have_z_deformation: boolean;
   geometry: THREE.BufferGeometry;
+  colormap: THREE.DataTexture;
 
   constructor(data, global_uniforms, path = []) {
     super(data, global_uniforms, path);
@@ -37,6 +70,15 @@ export class ThickEdgesObject extends RenderObject {
     this.uniforms.n_segments = new THREE.Uniform(5);
 
     const defines = Object({ ORDER: data.order2d });
+    if(data.edge_colors) {
+      defines.HAVE_COLORS = 1;
+      this.colormap = makeEdgeColorsTexture(data.edge_colors);
+      console.log("have colors", this.colormap.image);
+      this.uniforms.edges_colormap = new THREE.Uniform(this.colormap);
+      this.uniforms.edges_colormap_min = new THREE.Uniform(0.0);
+      this.uniforms.edges_colormap_max = new THREE.Uniform(1.0);
+      this.uniforms.edges_colormap_size = new THREE.Uniform(new THREE.Vector2(this.colormap.image.width, this.colormap.image.height));
+    }
     if (have_deformation) defines.DEFORMATION = 1;
     else if (have_z_deformation) defines.DEFORMATION_2D = 1;
     defines.THICK_LINES = 1;
