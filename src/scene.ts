@@ -447,8 +447,6 @@ export class Scene extends WebGLScene {
 
     this.last_frame_time = new Date().getTime();
     this.updateRenderData(render_data);
-    if (render_data.gui_settings)
-      this.gui.setGuiSettings(render_data.gui_settings);
     if (render_data.settings) this.gui.setGuiSettings(render_data.settings);
 
     console.log('Scene init done', this);
