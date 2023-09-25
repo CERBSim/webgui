@@ -217,14 +217,16 @@ export class Scene extends WebGLScene {
     this.controls.update();
   }
 
-  addRenderObject(object: RenderObject, visible = true) {
+  addRenderObject(object: RenderObject, visible = undefined) {
+    visible = visible ?? this.gui.settings.Objects[object.name] ?? true;
     this.render_objects.push(object);
     const name = object.name;
-    const objects = this.gui.settings.Objects;
-    if (name && !(name in objects)) {
-      const animate = () => this.animate();
+    const is_new_name =
+      name && this.render_objects.find((o) => o.name === name) !== undefined;
+    if (is_new_name) {
+      const objects = this.gui.settings.Objects;
       objects[name] = visible;
-      this.gui.gui_objects.add(objects, name).onChange(animate);
+      this.gui.gui_objects.add(objects, name).onChange(() => this.animate());
     }
     for (const mode of object.render_modes) {
       if (!(mode in this.render_objects_per_mode)) {

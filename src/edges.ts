@@ -70,14 +70,16 @@ export class ThickEdgesObject extends RenderObject {
     this.uniforms.n_segments = new THREE.Uniform(5);
 
     const defines = Object({ ORDER: data.order2d });
-    if(data.edge_colors) {
+    if (data.edge_colors) {
       defines.HAVE_COLORS = 1;
       this.colormap = makeEdgeColorsTexture(data.edge_colors);
-      console.log("have colors", this.colormap.image);
+      console.log('have colors', this.colormap.image);
       this.uniforms.edges_colormap = new THREE.Uniform(this.colormap);
       this.uniforms.edges_colormap_min = new THREE.Uniform(0.0);
       this.uniforms.edges_colormap_max = new THREE.Uniform(1.0);
-      this.uniforms.edges_colormap_size = new THREE.Uniform(new THREE.Vector2(this.colormap.image.width, this.colormap.image.height));
+      this.uniforms.edges_colormap_size = new THREE.Uniform(
+        new THREE.Vector2(this.colormap.image.width, this.colormap.image.height)
+      );
     }
     if (have_deformation) defines.DEFORMATION = 1;
     else if (have_z_deformation) defines.DEFORMATION_2D = 1;

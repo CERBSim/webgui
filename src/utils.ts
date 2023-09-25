@@ -193,7 +193,7 @@ export function readB64(base64) {
 }
 
 export function setKeys(dst, src) {
-  for (const key in dst) {
+  for (const key in src) {
     if (typeof dst[key] == 'object' && src[key] !== undefined)
       setKeys(dst[key], src[key]);
     else if (src[key] !== undefined) {

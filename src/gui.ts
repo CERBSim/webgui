@@ -131,6 +131,7 @@ export class GuiSettings {
     cloned.Light = { ...this.Light };
     cloned.Vectors = { ...this.Vectors };
     cloned.Misc = { ...this.Misc };
+    cloned.Objects = { ...this.Objects };
     cloned.axes_labels = [...this.axes_labels];
 
     return cloned;
@@ -141,16 +142,29 @@ export class GuiSettings {
   }
 }
 
-function updateSettings(s) {
-  s.Colormap = {
-    autoscale: s.autoscale,
-    min: s.colormap_min,
-    max: s.colormap_max,
-    ncolors: s.colormap_ncolors,
-  };
-  s.Misc.line_thickness = s.line_thickness;
-  s.Misc.subdivision = s.subdivision;
-  s.Misc.fast_draw = s.Misc.reduce_subdivision;
+function updateSettings(s, def) {
+  s.Colormap = s.Colormap ? s.Colormap : { ...def.Colormap };
+  s.Misc = s.Misc ? s.Misc : { ...def.Misc };
+  s.Objects = { ...def.Objects, ...(s.Objects ? s.Objects : {}) };
+
+  if (s.autoscale !== undefined) s.Colormap.autoscale = s.autoscale;
+  if (s.colormap_min !== undefined) s.Colormap.min = s.colormap_min;
+  if (s.colormap_max !== undefined) s.Colormap.max = s.colormap_max;
+  if (s.colormap_ncolors !== undefined) s.Colormap.ncolors = s.colormap_ncolors;
+
+  if (s.subdivision !== undefined) s.Misc.subdivision = s.subdivision;
+  if (s.line_thickness !== undefined) s.Misc.line_thickness = s.line_thickness;
+
+  if (s.Misc && s.Misc.reduce_subdivision !== undefined)
+    s.Misc.fast_draw = s.Misc.reduce_subdivision;
+
+  if (s.edges !== undefined) s.Objects.Edges = s.edges;
+  if (s.mesh !== undefined) s.Objects.Wireframe = s.mesh;
+  if (s.elements !== undefined) s.Objects.Surface = s.elements;
+
+  delete s.edges;
+  delete s.mesh;
+  delete s.elements;
 
   delete s.subdivision;
   delete s.autoscale;
@@ -159,11 +173,6 @@ function updateSettings(s) {
   delete s.colormap_ncolors;
   delete s.line_thickness;
   delete s.Misc.reduce_subdivision;
-
-  s.Objects = s.Objects ? s.Objects : {};
-  s.Objects.Edges = s.edges;
-  s.Objects.Wireframe = s.mesh;
-  s.Objects.Surface = s.elements;
 
   return s;
 }
@@ -219,7 +228,7 @@ export class GUI extends dat.GUI {
     const settings_default = this.settings_default;
     if (data.gui_settings) {
       const s = data.gui_settings;
-      if (s.subdivision) updateSettings(s);
+      updateSettings(s, settings_default);
       this.setGuiSettings(s);
       settings_default.update(s);
     }
