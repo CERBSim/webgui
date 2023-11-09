@@ -60,9 +60,6 @@ export interface MiscSettings {
 export class GuiSettings {
   [key: string]: unknown;
   eval = 0;
-  edges = true;
-  mesh = true;
-  elements = true;
   deformation = 0.0;
   Multidim: MultidimSettings = {
     t: 0.0,
