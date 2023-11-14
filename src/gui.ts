@@ -223,12 +223,6 @@ export class GUI extends dat.GUI {
     this.closed = true;
     const data = scene.render_data;
     const settings_default = this.settings_default;
-    if (data.gui_settings) {
-      const s = data.gui_settings;
-      updateSettings(s, settings_default);
-      this.setGuiSettings(s);
-      settings_default.update(s);
-    }
     if (Math.max(data.order2d, data.order3d) <= 1)
       settings_default.Misc.subdivision = 1;
 
@@ -246,6 +240,13 @@ export class GUI extends dat.GUI {
     this.initVectors();
     this.initMisc();
     this.initLight();
+
+    if (data.gui_settings) {
+      const s = data.gui_settings;
+      updateSettings(s, settings_default);
+      this.setGuiSettings(s);
+      settings_default.update(s);
+    }
 
     scene.on('afterrender', (_, frame_time: number) => {
       if (settings.Complex.animate) {
