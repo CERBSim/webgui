@@ -72,15 +72,8 @@ export class ThickEdgesObject extends RenderObject {
     const defines = Object({ ORDER: data.order2d });
     if (data.edge_colors) {
       defines.HAVE_COLORS = 1;
-      this.colormap = makeEdgeColorsTexture(data.edge_colors);
-      console.log('have colors', this.colormap.image);
-      this.uniforms.edges_colormap = new THREE.Uniform(this.colormap);
-      this.uniforms.edges_colormap_min = new THREE.Uniform(0.0);
-      this.uniforms.edges_colormap_max = new THREE.Uniform(1.0);
-      this.uniforms.edges_colormap_size = new THREE.Uniform(
-        new THREE.Vector2(this.colormap.image.width, this.colormap.image.height)
-      );
     }
+    this.updateTexture();
     if (have_deformation) defines.DEFORMATION = 1;
     else if (have_z_deformation) defines.DEFORMATION_2D = 1;
     defines.THICK_LINES = 1;
@@ -93,6 +86,19 @@ export class ThickEdgesObject extends RenderObject {
     this.three_object.matrixWorldAutoUpdate = false;
     this.geometry = geo;
     this.name = 'Edges';
+  }
+
+  updateTexture() {
+    const data = this.data;
+    if (data.edge_colors) {
+      this.colormap = makeEdgeColorsTexture(data.edge_colors);
+      this.uniforms.edges_colormap = new THREE.Uniform(this.colormap);
+      this.uniforms.edges_colormap_min = new THREE.Uniform(0.0);
+      this.uniforms.edges_colormap_max = new THREE.Uniform(1.0);
+      this.uniforms.edges_colormap_size = new THREE.Uniform(
+        new THREE.Vector2(this.colormap.image.width, this.colormap.image.height)
+      );
+    }
   }
 
   render(data) {
@@ -135,6 +141,7 @@ export class ThickEdgesObject extends RenderObject {
     geo._maxInstanceCount = readB64(pdata[0]).length / 4;
     geo.instanceCount = geo._maxInstanceCount;
     geo.boundingSphere = new THREE.Sphere(data.mesh_center, data.mesh_radius);
+    this.updateTexture();
   }
 }
 
