@@ -16,6 +16,7 @@ export class RenderObject {
   name: string;
   render_modes: Array<string> = ['default', 'locate', 'select'];
   path: Array<number | string>;
+  needs_update = true;
 
   constructor(data, global_uniforms, path: Array<number | string>) {
     if (data === undefined) {
@@ -53,11 +54,13 @@ export class RenderObject {
     if (!this.update(data)) return;
     this.three_object.matrixWorld.copy(data.controls.mat);
     data.renderer.render(this.three_object, data.camera);
+    this.needs_update = false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   updateRenderData(data, data2, t) {
     this.data = this.extractData(data);
+    this.needs_update = true;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

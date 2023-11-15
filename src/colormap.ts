@@ -44,7 +44,6 @@ function makeMeshColormapTexture(data) {
   const width = Math.min(n_colors, 1024);
   const height = Math.floor((n_colors + (width - 1)) / width);
   n_colors = width * height;
-  console.log('texture size', n_colors, width, height);
   const colormap_data = new Float32Array(4 * n_colors);
 
   for (let i = 0; i < 4 * n_colors; i++) {
@@ -198,7 +197,8 @@ export class Colorbar extends RenderObject {
     if (
       this.min_ != gui_status.Colormap.min ||
       this.max_ != gui_status.Colormap.max ||
-      this.n_colors != gui_status.Colormap.ncolors
+      this.n_colors != gui_status.Colormap.ncolors ||
+      this.needs_update
     ) {
       this.min_ = gui_status.Colormap.min;
       this.max_ = gui_status.Colormap.max;
@@ -209,6 +209,7 @@ export class Colorbar extends RenderObject {
     this.labels_object.style.display = visible ? 'block' : 'none';
     if (this.three_object && visible && mode == 'overlay')
       data.renderer.render(this.three_object, data.camera);
+    this.needs_update = false;
   }
 
   onResize(w: number, h: number) {
