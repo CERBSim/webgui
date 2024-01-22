@@ -59,6 +59,7 @@ export class MeshFunctionObject extends RenderObject {
       ),
       side: THREE.DoubleSide,
       uniforms: uniforms,
+      transparent: true,
     });
 
     mesh_material.polygonOffset = true;
