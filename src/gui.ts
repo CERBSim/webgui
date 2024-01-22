@@ -401,6 +401,8 @@ export class GUI extends dat.GUI {
         clipping_default.dist = data.clipping_dist;
         clipping.dist = data.clipping_dist;
       }
+      if (data.clipping_function != undefined)
+        settings.Objects["Clipping Plane"] = Boolean(data.clipping_function);
     }
 
     gui_clipping.add(clipping, 'enable').onChange(this.onchange);
