@@ -145,7 +145,24 @@ export class WebGLScene {
     element.appendChild(this.container);
 
     this.container.appendChild(this.renderer.domElement);
+
     llog.release();
+  }
+
+  getBackgroundColor() {
+    try {
+      const color = new THREE.Color(
+        window.getComputedStyle(this.container).color
+      );
+      // console.log("color", color)
+      if (color.r > 0.5) {
+        color.setScalar(0.1);
+        return color;
+      }
+    } catch (e) {
+      console.log(e);
+    }
+    return new THREE.Color(1, 1, 1);
   }
 
   async animate() {

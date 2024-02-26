@@ -786,7 +786,10 @@ export class Scene extends WebGLScene {
     uniforms.light_mat.value.w = Light.specularity;
 
     this.renderer.setRenderTarget(null);
-    this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
+    const backgroundColor = this.getBackgroundColor();
+    this.renderer.setClearColor(backgroundColor);
+    this.element.parentNode.style.backgroundColor = backgroundColor.getStyle();
+
     this.renderer.clear(true, true, true);
 
     this.renderObjects('update');
