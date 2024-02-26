@@ -4,6 +4,37 @@ import { RenderObject } from './render_object';
 
 import './styles.css';
 
+function makeTexture(colors: Float32Array) {
+  let n_colors = colors.length / 4;
+  const width = Math.min(n_colors, 1024);
+  const height = Math.floor((n_colors + (width - 1)) / width);
+  if(width>1)
+    n_colors = width * height;
+  const new_colors = new Float32Array(4 * n_colors);
+  new_colors.set(colors);
+  const colormap_texture = new THREE.DataTexture(
+    new_colors,
+    width,
+    height,
+    THREE.RGBAFormat,
+    THREE.FloatType
+  );
+  colormap_texture.magFilter = THREE.NearestFilter;
+  colormap_texture.needsUpdate = true;
+  return colormap_texture;
+}
+
+function colorsToFloat32Array(colors) {
+  if (typeof colors === 'number') return new Float32Array(colors);
+  const n_colors = colors.length;
+  const colormap_data = new Float32Array(4 * n_colors);
+  for (let i = 0; i < colors.length; i++) {
+    for (let k = 0; k < 3; k++) colormap_data[4 * i + k] = colors[i][k];
+    colormap_data[4 * i + 3] = colors[i].length > 3 ? colors[i][3] : 1.0;
+  }
+  return colormap_data;
+}
+
 function makeSelectedFaceTexture(
   data,
   bnds = [],
@@ -25,51 +56,7 @@ function makeSelectedFaceTexture(
     colormap_data[4 * bnds[i] + 2] = col_selected[2];
     colormap_data[4 * bnds[i] + 3] = col_selected[3];
   }
-
-  const colormap_texture = new THREE.DataTexture(
-    colormap_data,
-    n_colors,
-    1,
-    THREE.RGBAFormat,
-    THREE.FloatType
-  );
-  colormap_texture.magFilter = THREE.NearestFilter;
-  colormap_texture.needsUpdate = true;
-  return colormap_texture;
-}
-
-function makeMeshColormapTexture(data) {
-  // Drawing only a mesh -> colors are given explicitly in render data (or just use green)
-  let n_colors = data.mesh_regions_2d;
-  const width = Math.min(n_colors, 1024);
-  const height = Math.floor((n_colors + (width - 1)) / width);
-  n_colors = width * height;
-  const colormap_data = new Float32Array(4 * n_colors);
-
-  for (let i = 0; i < 4 * n_colors; i++) {
-    if (i % 4 == 1 || i % 4 == 3) colormap_data[i] = 1.0;
-    else colormap_data[i] = 0.0;
-  }
-
-  const colors = data.colors;
-  if (colors) {
-    for (let i = 0; i < colors.length; i++) {
-      for (let k = 0; k < 3; k++) colormap_data[4 * i + k] = colors[i][k];
-      colormap_data[4 * i + 3] = colors[i].length > 3 ? colors[i][3] : 1.0;
-    }
-  }
-  const colormap_texture = new THREE.DataTexture(
-    colormap_data,
-    width,
-    height,
-    THREE.RGBAFormat,
-    THREE.FloatType
-  );
-  colormap_texture.minFilter = THREE.NearestFilter;
-  colormap_texture.magFilter = THREE.NearestFilter;
-  colormap_texture.generateMipmaps = false;
-  colormap_texture.needsUpdate = true;
-  return colormap_texture;
+  return makeTexture(colormap_data);
 }
 
 function makeColormapTexture(n_colors) {
@@ -115,16 +102,7 @@ function makeColormapTexture(n_colors) {
     colormap_data[4 * i + 3] = 1.0;
   }
 
-  const colormap_texture = new THREE.DataTexture(
-    colormap_data,
-    n_colors,
-    1,
-    THREE.RGBAFormat,
-    THREE.FloatType
-  );
-  colormap_texture.magFilter = THREE.NearestFilter;
-  colormap_texture.needsUpdate = true;
-  return colormap_texture;
+  return makeTexture(colormap_data);
 }
 
 export class Colorbar extends RenderObject {
@@ -140,6 +118,7 @@ export class Colorbar extends RenderObject {
   max_: number;
   n_colors: number;
   label_style: string;
+  colors: Float32Array;
 
   constructor(data, global_uniforms, path = [], container) {
     super(data, global_uniforms, path);
@@ -243,8 +222,7 @@ export class Colorbar extends RenderObject {
   }
 
   updateTexture() {
-    if (this.mesh_only)
-      this.setTexture(makeMeshColormapTexture(this.data), true);
+    if (this.colors) this.setTexture(makeTexture(this.colors));
     else this.setTexture(makeColormapTexture(this.n_colors));
   }
 
@@ -274,6 +252,13 @@ export class Colorbar extends RenderObject {
         this.labels[i].nodeValue = (min + inc * i).toPrecision(digits);
       }
     else for (let i = 0; i < n; i++) this.labels[i].nodeValue = '';
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  updateRenderData(data, data2, t) {
+    this.data = this.extractData(data);
+    if (this.data.colors) this.colors = colorsToFloat32Array(this.data.colors);
+    this.needs_update = true;
   }
 
   setSelectedFace(
