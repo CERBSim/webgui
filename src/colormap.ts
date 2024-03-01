@@ -8,8 +8,7 @@ function makeTexture(colors: Float32Array) {
   let n_colors = colors.length / 4;
   const width = Math.min(n_colors, 1024);
   const height = Math.floor((n_colors + (width - 1)) / width);
-  if(width>1)
-    n_colors = width * height;
+  if (width > 1) n_colors = width * height;
   const new_colors = new Float32Array(4 * n_colors);
   new_colors.set(colors);
   const colormap_texture = new THREE.DataTexture(
