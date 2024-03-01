@@ -568,13 +568,18 @@ export class GUI extends dat.GUI {
     const settings_default = this.settings_default.Multidim;
     const md = data.multidim_data.length;
 
-    if (data.multidim_interpolate) {
-      if (data.multidim_animate) {
-        settings_default.animate = true;
-        settings.animate = true;
-      }
+    if (data.multidim_animate) {
+      settings_default.animate = true;
+      settings.animate = true;
+    }
+    const gui_md = this.addFolder('Multidim');
+    gui_md.add(settings, 'animate').onChange(() => {
+      scene.last_frame_time = new Date().getTime();
+      this.onchange();
+    });
+    gui_md.add(settings, 'speed', 0.0, 10, 0.001).onChange(this.onchange);
 
-      const gui_md = this.addFolder('Multidim');
+    if (data.multidim_interpolate) {
       this.multidim_controller = gui_md
         .add(settings, 't', 0, md, 0.01)
         .onChange(() => {
@@ -596,17 +601,15 @@ export class GUI extends dat.GUI {
               t
             );
         });
-      gui_md.add(settings, 'animate').onChange(() => {
-        scene.last_frame_time = new Date().getTime();
-        this.onchange();
-      });
-      gui_md.add(settings, 'speed', 0.0, 10, 0.001).onChange(this.onchange);
     } else {
-      this.add(settings, 'multidim', 0, md, 1).onChange(() => {
-        const n = settings.multidim;
-        if (n == 0) scene.setRenderData(scene.render_data);
-        else scene.setRenderData(scene.render_data.multidim_data[n - 1]);
-      });
+      this.multidim_controller = gui_md
+        .add(settings, 't', 0, md, 1)
+        .onChange(() => {
+          const t = settings.t;
+          const n = Math.floor(t);
+          if (n == 0) scene.setRenderData(scene.render_data);
+          else scene.setRenderData(scene.render_data.multidim_data[n - 1]);
+        });
     }
   }
 
