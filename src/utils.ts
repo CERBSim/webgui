@@ -151,10 +151,11 @@ export class WebGLScene {
 
   getBackgroundColor() {
     try {
-      const color = new THREE.Color(
-        window.getComputedStyle(this.container).color
-      );
-      // console.log("color", color)
+      const styleColor = window.getComputedStyle(this.container).color;
+      let color;
+      if (styleColor.startsWith('rgba'))
+        color = new THREE.Color(...styleColor.match(/\d+\.*\d*/g).map(Number));
+      else color = new THREE.Color(styleColor);
       if (color.r > 0.5) {
         color.setScalar(0.1);
         return color;
