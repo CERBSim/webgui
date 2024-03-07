@@ -167,6 +167,8 @@ export class CameraControls extends THREE.EventDispatcher {
   }
 
   loadSettings(settings) {
+    if (settings.reset) this.reset();
+
     if (settings.mat) {
       this.mat.copy(settings.mat);
       this.center.copy(settings.center);
