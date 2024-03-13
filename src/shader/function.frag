@@ -24,14 +24,6 @@ void main()
   if( isBehindClippingPlane(p_) )
     discard;
 
-#ifdef NO_FUNCTION_VALUES
-  vec4 color = vec4(.7,.7,.7,1);
-#else
-  vec4 color = getColor(GetValue(value));
-  if(color.w == 0.0)
-    discard;
-#endif
-
   if(function_mode == 4.0)
   {
     gl_FragColor = vec4(value, 1.0);
@@ -53,6 +45,14 @@ void main()
       return;
   }
 
+
+#ifdef NO_FUNCTION_VALUES
+  vec4 color = vec4(.7,.7,.7,1);
+#else
+  vec4 color = getColor(GetValue(value));
+  if(color.w == 0.0)
+    discard;
+#endif
 
   vec3 norm = normal_;
   bool inside = false;

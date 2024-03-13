@@ -643,7 +643,7 @@ export class Scene extends WebGLScene {
       1
     );
     this.renderer.setRenderTarget(this.render_target);
-    this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0));
+    this.renderer.setClearColor(new THREE.Color(1.0, 1.0, 1.0), 0.0);
     this.renderer.clear(true, true, true);
     this.renderObjects('locate');
 
@@ -658,10 +658,10 @@ export class Scene extends WebGLScene {
       pixel_buffer
     );
     this.camera.clearViewOffset();
-    // console.log("pixel buffer", pixel_buffer);
+    // console.log("pixel buffer", pixel_buffer[0], pixel_buffer[1], pixel_buffer[2], pixel_buffer[3])
 
     this.renderer.setRenderTarget(null);
-    if (pixel_buffer[3] !== 1) {
+    if (pixel_buffer[3] !== 0.0) {
       const p = new THREE.Vector3();
       for (let i = 0; i < 3; i++) {
         p.setComponent(i, (pixel_buffer[i] - this.trafo.y) / this.trafo.x);
