@@ -258,7 +258,8 @@ export class GUI extends dat.GUI {
       }
       if (settings.Multidim.animate) {
         settings.Multidim.t += frame_time * settings.Multidim.speed;
-        if (settings.Multidim.t > scene.render_data.multidim_data.length)
+        // For discrete multidim data, we need to extend the length by .99 to not skip last value
+        if (settings.Multidim.t > scene.render_data.multidim_data.length + (scene.render_data.multidim_interpolate ? 0.0 : 0.99))
           settings.Multidim.t = 0.0;
 
         this.multidim_controller.updateDisplay();
@@ -581,7 +582,7 @@ export class GUI extends dat.GUI {
 
     if (data.multidim_interpolate) {
       this.multidim_controller = gui_md
-        .add(settings, 't', 0, md, 0.01)
+        .add(settings, 't', 0, md+0.99, 0.01) // extra .99 to show the last value longer
         .onChange(() => {
           const s = settings.t;
           const n = Math.floor(s);
