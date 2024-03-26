@@ -416,7 +416,7 @@ export class ClippingVectorsObject extends RenderObject {
     });
 
     const geo = new THREE.InstancedBufferGeometry();
-    const cone = new THREE.ConeGeometry(0.5, 1, 10);
+    const cone = new THREE.ConeGeometry(0.3, 1.5, 10);
     geo.setIndex(cone.getIndex());
     geo.setAttribute('position', cone.getAttribute('position'));
     geo.setAttribute('normal', cone.getAttribute('normal'));
