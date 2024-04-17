@@ -181,7 +181,7 @@ export class Colorbar extends RenderObject {
       this.min_ = gui_status.Colormap.min;
       this.max_ = gui_status.Colormap.max;
       this.n_colors = gui_status.Colormap.ncolors;
-      this.updateTexture();
+      this.updateTexture(this.mesh_only);
       if (!this.mesh_only) this.updateLabels();
     }
     this.labels_object.style.display = visible ? 'block' : 'none';
@@ -220,9 +220,9 @@ export class Colorbar extends RenderObject {
     }
   }
 
-  updateTexture() {
-    if (this.colors) this.setTexture(makeTexture(this.colors));
-    else this.setTexture(makeColormapTexture(this.n_colors));
+  updateTexture(meshOnly) {
+    if (this.colors) this.setTexture(makeTexture(this.colors), meshOnly);
+    else this.setTexture(makeColormapTexture(this.n_colors), meshOnly);
   }
 
   setTexture(tex, isMeshTexture = false) {

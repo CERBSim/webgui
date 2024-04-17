@@ -298,8 +298,9 @@ vec4 getColor(float value)
   float y = 0.5;
   if(colormap_size.y > 1.0)
   {
-      x = mod(value, colormap_size.x)/(colormap_size.x-1.);
-      y = (value - x*colormap_size.x)/(colormap_size.y-1.);
+      x = mod(value, colormap_size.x);
+      y = ((value-x) / colormap_size.x)/(colormap_size.y-1.);
+      x = x/(colormap_size.x-1.);
   }
   else if(colormap_size.x > 1.0)
       x = value/(colormap_size.x-1.);
