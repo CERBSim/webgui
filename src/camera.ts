@@ -175,6 +175,19 @@ export class CameraControls extends THREE.EventDispatcher {
       this.update();
       this.scene.setCenterTag();
     }
+
+    if (settings.euler_angles) {
+      const a = settings.euler_angles;
+      const order = a.length > 3 ? a[3] : 'XYZ';
+      const s = Math.PI / 180;
+      const euler = new THREE.Euler(s*a[0], s*a[1], s*a[2], order)
+      const rotmat = new THREE.Matrix4().makeRotationFromEuler(euler);
+      const transformed_center = this.center.clone();
+      transformed_center.applyMatrix4(this.mat);
+      wrapTransformation(rotmat, transformed_center);
+      this.mat.premultiply(rotmat);
+    }
+
     if (settings.transformations) {
       for (const trans of settings.transformations) {
         switch (trans.type) {
@@ -210,6 +223,20 @@ export class CameraControls extends THREE.EventDispatcher {
     settings.mat = this.mat;
     settings.center = this.center;
     settings.isPerspectiveCamera = this.scene.camera.isPerspectiveCamera;
+  }
+
+  getEulerAngles() {
+    const euler = new THREE.Euler();
+    euler.setFromRotationMatrix(this.rotmat);
+    const s = 180/Math.PI;
+    return [s*euler.x, s*euler.y, s*euler.z];
+  }
+
+  setEulerAngles() {
+    const euler = new THREE.Euler();
+    euler.setFromRotationMatrix(this.mat);
+    const s = 180/Math.PI;
+    return [s*euler.x, s*euler.y, s*euler.z];
   }
 
   keydown(event) {

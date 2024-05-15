@@ -98,15 +98,19 @@ export class GuiSettings {
     line_thickness: 5,
     subdivision: 5,
     fast_draw: false,
-    'reset settings': () => {
-      /* do nothing */
-    },
-    'store settings': () => {
-      /* do nothing */
-    },
-    'load settings': () => {
-      /* do nothing */
-    },
+    // 'reset settings': () => {
+    //   /* do nothing */
+    // },
+    // 'copy euler angles': () => {
+    //   console.log('copy euler angles, default init');
+    //   /* do nothing */
+    // },
+    // 'store settings': () => {
+    //   /* do nothing */
+    // },
+    // 'load settings': () => {
+    //   /* do nothing */
+    // },
   };
 
   Objects: { [key: string]: boolean } = {};
@@ -442,6 +446,11 @@ export class GUI extends dat.GUI {
       document.cookie =
         'gui_status=' + btoa(JSON.stringify(this.getGuiSettings()));
     };
+    misc['copy euler angles'] = () => {
+      const angles = JSON.stringify(this.scene.controls.getEulerAngles());
+      console.log("euler angles: ", angles);
+      navigator.clipboard.writeText(angles);
+    };
     misc['load settings'] = () => {
       const name = 'gui_status=';
       const decodedCookie = decodeURIComponent(document.cookie);
@@ -459,6 +468,7 @@ export class GUI extends dat.GUI {
     };
 
     gui_misc.add(misc, 'fast_draw');
+    gui_misc.add(misc, 'copy euler angles');
     gui_misc.add(misc, 'store settings');
     gui_misc.add(misc, 'load settings');
     this.gui_misc = gui_misc;
