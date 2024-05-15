@@ -566,9 +566,10 @@ export class GUI extends dat.GUI {
   initDeformation() {
     const scene = this.scene;
     if (scene.have_z_deformation || scene.have_deformation) {
-      this.settings_default.deformation = this.data.deformation ? 1.0 : 0.0;
+      const deformation_scale = this.data.deformation_scale || 1.0;
+      this.settings_default.deformation = this.data.deformation ? deformation_scale : 0.0;
       this.settings.deformation = this.settings_default.deformation;
-      this.add(this.settings, 'deformation', 0.0, 1.0, 0.0001).onChange(
+      this.add(this.settings, 'deformation', 0.0, deformation_scale, deformation_scale*0.0001).onChange(
         this.onchange
       );
     }
