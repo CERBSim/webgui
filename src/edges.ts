@@ -158,7 +158,7 @@ export class FieldLinesObject extends RenderObject {
     geo.setAttribute('normal', cyl.getAttribute('normal'));
     geo.setAttribute('uv', cyl.getAttribute('uv'));
 
-    this.uniforms.thickness = new THREE.Uniform(this.data.thickness);
+    this.uniforms.line_thickness = new THREE.Uniform(this.data.thickness);
     const defines = {};
     const material = new THREE.RawShaderMaterial({
       vertexShader: getShader('fieldlines.vert', defines),

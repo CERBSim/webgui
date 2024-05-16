@@ -1,4 +1,4 @@
-uniform float thickness;
+uniform float line_thickness;
 
 // default attributes (from cylinder-geometry)
 attribute vec3 position;
@@ -16,7 +16,7 @@ varying vec3 value_;
 void main() {
     float len = length(pend-pstart);
     vec4 quat = quaternion(pend-pstart);
-    vec3 p = vec3(thickness, len, thickness)*position;
+    vec3 p = vec3(line_thickness, len, line_thickness)*position;
     p_ = pstart;
     p_ += rotate(p, quat);
 
