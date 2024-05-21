@@ -342,6 +342,7 @@ export class Scene extends WebGLScene {
     this.clipping_plane = new THREE.Vector4(0, 0, 1, 0);
     uniforms.aspect = new THREE.Uniform(this.perspective_camera.aspect);
     uniforms.line_thickness = new THREE.Uniform(0.001);
+    uniforms.fieldline_thickness = new THREE.Uniform(0.0);
     uniforms.clipping_plane = new THREE.Uniform(this.clipping_plane);
     uniforms.highlight_selected_face = new THREE.Uniform(false);
     uniforms.selected_face = new THREE.Uniform(-1);
