@@ -141,6 +141,25 @@ vec3 GetNormal(float u, float v)
 
   vec4 du = B00*(p00-p10) + B01*(p01-p11) + B10*(p10-p20);
   vec4 dv = B00*(p01-p10) + B01*(p02-p11) + B10*(p11-p20);
+
+  #ifdef DEFORMATION
+    du.x += deformation*du.w;
+    dv.x += deformation*dv.w;
+    vec2 d00 = vec00_01.xy;
+    vec2 d01 = vec00_01.zw;
+    vec2 d02 = vec02_10.xy;
+    vec2 d10 = vec02_10.zw;
+    vec2 d11 = vec11_20.xy;
+    vec2 d20 = vec11_20.zw;
+
+    du.yz += deformation*(B00*(d00-d10) + B01*(d01-d11) + B10*(d10-d20));
+    dv.yz += deformation*(B00*(d01-d10) + B01*(d02-d11) + B10*(d11-d20));
+  #endif // DEFORMATION
+  #ifdef DEFORMATION_2D
+    du.z += deformation*du.w;
+    dv.z += deformation*dv.w;
+  #endif
+
   return normalize(cross(du.xyz, dv.xyz));
 }
 
@@ -229,6 +248,32 @@ vec3 GetNormal(float u, float v)
   vec4 dv = B00*(p01-p10) + B01*(p02-p11) + B02*(p03-p12) +
             B10*(p11-p20) + B11*(p12-p21) +
             B20*(p21-p30);
+#ifdef DEFORMATION
+  du.x += deformation*du.w;
+  dv.x += deformation*dv.w;
+
+  vec2 d00 = vec00_01.xy;
+  vec2 d01 = vec00_01.zw;
+  vec2 d02 = vec02_03.xy;
+  vec2 d03 = vec02_03.zw;
+  vec2 d10 = vec10_11.xy;
+  vec2 d11 = vec10_11.zw;
+  vec2 d12 = vec12_20.xy;
+  vec2 d20 = vec12_20.zw;
+  vec2 d21 = vec21_30.xy;
+  vec2 d30 = vec21_30.zw;
+
+  du.yz += deformation*(B00*(d00-d10) + B01*(d01-d11) + B02*(d02-d12) +
+            B10*(d10-d20) + B11*(d11-d21) +
+            B20*(d20-d30));
+  dv.yz += deformation*(B00*(d01-d10) + B01*(d02-d11) + B02*(d03-d12) +
+            B10*(d11-d20) + B11*(d12-d21) +
+            B20*(d21-d30));
+#endif // DEFORMATION
+#ifdef DEFORMATION_2D
+  du.z += deformation*du.w;
+  dv.z += deformation*dv.w;
+#endif
   return normalize(cross(du.xyz, dv.xyz));
 }
 
