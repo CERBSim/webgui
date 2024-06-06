@@ -317,11 +317,11 @@ export class GUI extends dat.GUI {
       settings_default.max = data.mesh_regions_2d - 0.5;
       settings.min = -0.5;
       settings.max = data.mesh_regions_2d - 0.5;
+      return;
     }
 
-    if (!data.draw_vol && !data.draw_surf) return;
-    const cmin = data.funcmin;
-    const cmax = data.funcmax;
+    const cmin = data.funcmin !== undefined ? data.funcmin : 0;
+    const cmax = data.funcmax !== undefined ? data.funcmax : 1;
     settings.min = cmin;
     settings.max = cmax;
     settings_default.min = cmin;
