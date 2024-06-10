@@ -180,7 +180,7 @@ export class CameraControls extends THREE.EventDispatcher {
       const a = settings.euler_angles;
       const order = a.length > 3 ? a[3] : 'XYZ';
       const s = Math.PI / 180;
-      const euler = new THREE.Euler(s*a[0], s*a[1], s*a[2], order)
+      const euler = new THREE.Euler(s * a[0], s * a[1], s * a[2], order);
       const rotmat = new THREE.Matrix4().makeRotationFromEuler(euler);
       const transformed_center = this.center.clone();
       transformed_center.applyMatrix4(this.mat);
@@ -228,15 +228,15 @@ export class CameraControls extends THREE.EventDispatcher {
   getEulerAngles() {
     const euler = new THREE.Euler();
     euler.setFromRotationMatrix(this.rotmat);
-    const s = 180/Math.PI;
-    return [s*euler.x, s*euler.y, s*euler.z];
+    const s = 180 / Math.PI;
+    return [s * euler.x, s * euler.y, s * euler.z];
   }
 
   setEulerAngles() {
     const euler = new THREE.Euler();
     euler.setFromRotationMatrix(this.mat);
-    const s = 180/Math.PI;
-    return [s*euler.x, s*euler.y, s*euler.z];
+    const s = 180 / Math.PI;
+    return [s * euler.x, s * euler.y, s * euler.z];
   }
 
   keydown(event) {

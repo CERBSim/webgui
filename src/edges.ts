@@ -9,7 +9,6 @@ function makeEdgeColorsTexture(colors) {
   const width = Math.min(n_colors, 1024);
   const height = Math.floor((n_colors + (width - 1)) / width);
   n_colors = width * height;
-  console.log('texture size', n_colors, width, height);
   const colormap_data = new Float32Array(4 * n_colors);
 
   for (let i = 0; i < 4 * n_colors; i++) {
@@ -147,6 +146,7 @@ export class ThickEdgesObject extends RenderObject {
 
 export class FieldLinesObject extends RenderObject {
   geometry: THREE.BufferGeometry;
+  is_complex: boolean;
 
   constructor(data, uniforms, path) {
     super(data, uniforms, path);
@@ -159,6 +159,8 @@ export class FieldLinesObject extends RenderObject {
     geo.setAttribute('uv', cyl.getAttribute('uv'));
 
     this.uniforms.fieldline_thickness.value = this.data.thickness;
+    this.uniforms.fieldline_max_phase_dist.value = 0.0;
+    this.uniforms.fieldline_phase.value = 0.0;
     const defines = {};
     const material = new THREE.RawShaderMaterial({
       vertexShader: getShader('fieldlines.vert', defines),
@@ -177,7 +179,8 @@ export class FieldLinesObject extends RenderObject {
     this.geometry = geo;
   }
 
-  updateRenderData(data) {
+  updateRenderData(data, data2) {
+    if (data2) return;
     this.data = this.extractData(data);
     const setAttribute = (name: string, num_components: number) => {
       const vals = new Float32Array(this.data[name]);
@@ -187,8 +190,27 @@ export class FieldLinesObject extends RenderObject {
     setAttribute('pstart', 3);
     setAttribute('pend', 3);
     setAttribute('value', 1);
+    const phase = new Float32Array(this.data['value'].length);
+    this.is_complex = this.data['phase'] !== undefined;
+    if (this.data['num_points']) {
+      let i = 0;
+      for (let iPhase = 0; iPhase < this.data['num_points'].length; iPhase++)
+        for (let k = 0; k < this.data['num_points'][iPhase]; k++)
+          phase[i++] = this.is_complex ? this.data['phase'][iPhase] : iPhase;
+    }
+    const phaseAttr = new THREE.InstancedBufferAttribute(phase, 1);
+    this.geometry.setAttribute('phase', phaseAttr);
+    this.uniforms.fieldline_max_phase_dist.value = this.data['max_phase_dist'];
+    this.uniforms.fieldline_fade_dist.value = this.data['fade_dist'];
+    this.uniforms.fieldline_is_complex.value = this.is_complex ? 1 : 0;
     this.uniforms.fieldline_thickness.value = this.data.thickness;
     this.geometry.instanceCount = this.data.value.length;
+  }
+
+  before_render({ gui_status }) {
+    if (this.is_complex)
+      this.uniforms.fieldline_phase.value = gui_status.Complex.phase;
+    else this.uniforms.fieldline_phase.value = gui_status.Multidim.t;
   }
 }
 

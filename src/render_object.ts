@@ -50,9 +50,13 @@ export class RenderObject {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  before_render(data) {}
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   render(data) {
     if (!this.update(data)) return;
     this.three_object.matrixWorld.copy(data.controls.mat);
+    this.before_render(data);
     data.renderer.render(this.three_object, data.camera);
     this.needs_update = false;
   }

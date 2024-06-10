@@ -234,6 +234,19 @@ export class GUI extends dat.GUI {
     this.settings = settings;
     this.gui_functions = { ...gui_functions };
 
+    if (data.objects) {
+      for (const name in data.objects) {
+        const od = data.objects[name];
+        if (od.type == 'fieldlines' && od.num_points) {
+          if (od.phase) data.is_complex = true;
+          else {
+            if (!data.multidim_data)
+              data.multidim_data = new Array(od.num_points.length);
+          }
+        }
+      }
+    }
+
     this.initFunctions();
     this.initObjects();
     this.initColormap();
@@ -448,7 +461,7 @@ export class GUI extends dat.GUI {
     };
     misc['copy euler angles'] = () => {
       const angles = JSON.stringify(this.scene.controls.getEulerAngles());
-      console.log("euler angles: ", angles);
+      console.log('euler angles: ', angles);
       navigator.clipboard.writeText(angles);
     };
     misc['load settings'] = () => {
@@ -567,11 +580,17 @@ export class GUI extends dat.GUI {
     const scene = this.scene;
     if (scene.have_z_deformation || scene.have_deformation) {
       const deformation_scale = this.data.deformation_scale || 1.0;
-      this.settings_default.deformation = this.data.deformation ? deformation_scale : 0.0;
+      this.settings_default.deformation = this.data.deformation
+        ? deformation_scale
+        : 0.0;
       this.settings.deformation = this.settings_default.deformation;
-      this.add(this.settings, 'deformation', 0.0, deformation_scale, deformation_scale*0.0001).onChange(
-        this.onchange
-      );
+      this.add(
+        this.settings,
+        'deformation',
+        0.0,
+        deformation_scale,
+        deformation_scale * 0.0001
+      ).onChange(this.onchange);
     }
   }
 
@@ -602,20 +621,24 @@ export class GUI extends dat.GUI {
           const s = settings.t;
           const n = Math.floor(s);
           const t = s - n;
-          if (n == 0)
-            scene.interpolateRenderData(
-              scene.render_data,
-              scene.render_data.multidim_data[0],
-              t
-            );
-          else if (s == md)
-            scene.setRenderData(scene.render_data.multidim_data[md - 1]);
-          else
-            scene.interpolateRenderData(
-              scene.render_data.multidim_data[n - 1],
-              scene.render_data.multidim_data[n],
-              t
-            );
+          if (scene.render_data.multidim_data[0] !== undefined) {
+            if (n == 0)
+              scene.interpolateRenderData(
+                scene.render_data,
+                scene.render_data.multidim_data[0],
+                t
+              );
+            else if (s == md)
+              scene.setRenderData(scene.render_data.multidim_data[md - 1]);
+            else
+              scene.interpolateRenderData(
+                scene.render_data.multidim_data[n - 1],
+                scene.render_data.multidim_data[n],
+                t
+              );
+          }
+
+          if (!settings.animate) this.onchange();
         });
     } else {
       this.multidim_controller = gui_md
@@ -623,8 +646,11 @@ export class GUI extends dat.GUI {
         .onChange(() => {
           const t = settings.t;
           const n = Math.floor(t);
-          if (n == 0) scene.setRenderData(scene.render_data);
-          else scene.setRenderData(scene.render_data.multidim_data[n - 1]);
+          if (scene.render_data.multidim_data[0] !== undefined) {
+            if (n == 0) scene.setRenderData(scene.render_data);
+            else scene.setRenderData(scene.render_data.multidim_data[n - 1]);
+          }
+          if (!settings.animate) this.onchange();
         });
     }
   }
