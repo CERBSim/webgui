@@ -128,12 +128,6 @@ export class Scene extends WebGLScene {
 
   constructor(widget = undefined) {
     super();
-
-    for (const mode of this.render_modes)
-      this.render_objects_per_mode[mode] = [];
-
-    this.have_webgl2 = false;
-
     this.event_handlers = {};
     this.widget = widget;
   }
@@ -153,7 +147,14 @@ export class Scene extends WebGLScene {
   }
 
   cleanup() {
-    for (const obj of this.render_objects) obj.cleanupHTML();
+    for (const mode of this.render_modes)
+      this.render_objects_per_mode[mode] = [];
+
+    this.have_webgl2 = false;
+
+    for (const obj of this.render_objects)
+      obj.cleanupHTML();
+    this.render_objects = [];
 
     if (this.tooltip) this.tooltip.remove();
   }

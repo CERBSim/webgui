@@ -383,10 +383,12 @@ export class GUI extends dat.GUI {
         colormap.min = cmin;
         colormap.max = cmax;
       }
-      this.c_cmin.updateDisplay();
-      this.c_cmax.updateDisplay();
+      if(this.c_cmin) {
+        this.c_cmin.updateDisplay();
+        this.c_cmax.updateDisplay();
+        if (cmax > cmin) this.setStepSize(cmin, cmax);
+      }
 
-      if (cmax > cmin) this.setStepSize(cmin, cmax);
     }
   }
 

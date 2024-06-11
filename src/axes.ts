@@ -23,7 +23,11 @@ export class Axes extends RenderObject {
   }
 
   cleanupHTML() {
-    // this.labels_object.innerHTML = '';
+    console.log('cleanupHTML axes');
+    if (this.labels && this.labels.length)
+      this.labels.map((label) => label.element.remove());
+    this.labels = [];
+    console.log('done cleanupHTML axes');
   }
 
   render(data) {
