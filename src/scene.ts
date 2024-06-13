@@ -130,6 +130,7 @@ export class Scene extends WebGLScene {
     super();
     this.event_handlers = {};
     this.widget = widget;
+    this.on('select', (dim, index) => self.onSelect(dim, index));
   }
 
   on(event_name, handler) {
@@ -152,8 +153,7 @@ export class Scene extends WebGLScene {
 
     this.have_webgl2 = false;
 
-    for (const obj of this.render_objects)
-      obj.cleanupHTML();
+    for (const obj of this.render_objects) obj.cleanupHTML();
     this.render_objects = [];
 
     if (this.tooltip) this.tooltip.remove();
@@ -600,40 +600,42 @@ export class Scene extends WebGLScene {
       this.context.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
       index = Math.round(pixels[1]);
       dim = Math.round(pixels[0]);
-      if (index >= 0 && dim > 0) {
-        // this.uniforms.highlight_selected_face.value = dim;
-        this.uniforms.selected_face.value = index;
-        let name = '';
-        let text = '';
-        if (dim == 1) {
-          text = 'Edge';
-          if (
-            this.render_data.edge_names &&
-            this.render_data.edge_names.length > index
-          )
-            name = this.render_data.edge_names[index];
-        } else if (dim == 2) {
-          text = 'Face';
-          if (this.render_data.names && this.render_data.names.length > index)
-            name = this.render_data.names[index];
-        }
-        if (text != '') {
-          text += ` ${index}`;
-          if (name == '') name = '(no name)';
-          text += `\n ${name}`;
-          this.tooltip.textContent = text;
-          this.tooltip.style.visibility = 'visible';
-          this.tooltip.style.left = `${x}px`;
-          this.tooltip.style.top = `${y + 20}px`;
-        }
-      } else {
-        this.uniforms.highlight_selected_face.value = false;
-        this.tooltip.style.visibility = 'hidden';
-      }
 
       this.camera.clearViewOffset();
     }
     return { dim, index };
+  }
+
+  onSelect(dim, index) {
+    if (index < 0 || dim <= 0) {
+      this.uniforms.highlight_selected_face.value = false;
+      this.tooltip.style.visibility = 'hidden';
+      return;
+    }
+    this.uniforms.selected_face.value = index;
+    let name = '';
+    let text = '';
+    if (dim == 1) {
+      text = 'Edge';
+      if (
+        this.render_data.edge_names &&
+        this.render_data.edge_names.length > index
+      )
+        name = this.render_data.edge_names[index];
+    } else if (dim == 2) {
+      text = 'Face';
+      if (this.render_data.names && this.render_data.names.length > index)
+        name = this.render_data.names[index];
+    }
+    if (text != '') {
+      text += ` ${index}`;
+      if (name == '') name = '(no name)';
+      text += `\n ${name}`;
+      this.tooltip.textContent = text;
+      this.tooltip.style.visibility = 'visible';
+      this.tooltip.style.left = `${x}px`;
+      this.tooltip.style.top = `${y + 20}px`;
+    }
   }
 
   getPixelCoordinates(x: number, y: number) {
