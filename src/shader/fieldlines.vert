@@ -18,6 +18,10 @@ varying vec3 p_;
 varying vec3 normal_;
 varying vec3 value_;
 
+float fade(float t) {
+  return 1.0-clamp(t*t*t*(t*(t*6.0-15.0)+10.0), 0.0, 1.0);
+}
+
 void main() {
     float phase_dist = abs(phase - fieldline_phase);
     if( phase_dist > fieldline_max_phase_dist + 2.*fieldline_fade_dist) {
@@ -27,7 +31,7 @@ void main() {
     float thickness = fieldline_thickness;
     if(fieldline_fade_dist>0. && phase_dist>fieldline_max_phase_dist) {
       float d = (phase_dist-fieldline_max_phase_dist)/fieldline_fade_dist;
-      thickness *= clamp(1.0-d*d, 0.0, 1.0);
+      thickness *= fade(d);
     }
     float len = length(pend-pstart);
     vec4 quat = quaternion(pend-pstart);
