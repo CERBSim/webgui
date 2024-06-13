@@ -130,7 +130,7 @@ export class Scene extends WebGLScene {
     super();
     this.event_handlers = {};
     this.widget = widget;
-    this.on('select', (dim, index) => self.onSelect(dim, index));
+    this.on('select', (data) => this.onSelect(data));
   }
 
   on(event_name, handler) {
@@ -606,7 +606,7 @@ export class Scene extends WebGLScene {
     return { dim, index };
   }
 
-  onSelect(dim, index) {
+  onSelect({x,y, dim, index}) {
     if (index < 0 || dim <= 0) {
       this.uniforms.highlight_selected_face.value = false;
       this.tooltip.style.visibility = 'hidden';
