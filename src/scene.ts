@@ -104,7 +104,6 @@ export class Scene extends WebGLScene {
     'select',
     'locate',
   ];
-  overlay_objects = [];
 
   is_complex: boolean;
   trafo: THREE.Vector2;
@@ -606,7 +605,7 @@ export class Scene extends WebGLScene {
     return { dim, index };
   }
 
-  onSelect({x,y, dim, index}) {
+  onSelect({ x, y, dim, index }) {
     if (index < 0 || dim <= 0) {
       this.uniforms.highlight_selected_face.value = false;
       this.tooltip.style.visibility = 'hidden';

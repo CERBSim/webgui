@@ -11,7 +11,7 @@ export class Label3D extends RenderObject {
 
   constructor(parent, data, path = []) {
     super(data, {}, path);
-    this.data = this.extractData(data);
+    this.render_modes = ['overlay'];
 
     const element = document.createElement('div');
     const el_text = document.createTextNode(this.data.text);

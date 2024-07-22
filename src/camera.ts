@@ -66,8 +66,12 @@ export class CameraControls extends THREE.EventDispatcher {
     );
 
     this.domElement.addEventListener('click', (e) => this.onClick(e), false);
-    // this.domElement.addEventListener( 'mouseup', onMouseUp, false );
-    window.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
+    this.domElement.addEventListener(
+      'mouseup',
+      (e) => this.onMouseUp(e),
+      false
+    );
+    // window.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
     this.domElement.addEventListener(
       'mousedown',
       (e) => this.onMouseDown(e),
@@ -319,8 +323,8 @@ export class CameraControls extends THREE.EventDispatcher {
   }
 
   async onClick(event) {
-    event.preventDefault();
     if (this.did_move) return;
+    event.preventDefault();
     const rect = this.domElement.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -332,6 +336,8 @@ export class CameraControls extends THREE.EventDispatcher {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async onMouseUp(event) {
+    event.preventDefault();
+    event.stopPropagation();
     this.mode = null;
     this.is_moving = false;
 
