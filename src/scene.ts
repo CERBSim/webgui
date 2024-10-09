@@ -85,6 +85,7 @@ export class Scene extends WebGLScene {
   widget;
   width: number;
   height: number;
+  widthMargin = 6;
   heightMargin = 6;
   hidden = false;
 
@@ -736,7 +737,7 @@ export class Scene extends WebGLScene {
   }
 
   calcSize() {
-    const w = this.element.parentNode.clientWidth;
+    const w = this.element.parentNode.clientWidth - this.widthMargin;
     const h = this.element.parentNode.clientHeight - this.heightMargin;
     return { w, h };
   }
