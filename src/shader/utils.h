@@ -139,8 +139,34 @@ vec3 GetNormal(float u, float v)
   float B01 = 2.0*v;
   float B10 = 2.0*w;
 
-  vec4 du = B00*(p00-p10) + B01*(p01-p11) + B10*(p10-p20);
-  vec4 dv = B00*(p01-p10) + B01*(p02-p11) + B10*(p11-p20);
+  vec4 p00_ = p00;
+  vec4 p01_ = p01;
+  vec4 p02_ = p02;
+  vec4 p10_ = p10;
+  vec4 p11_ = p11;
+  vec4 p20_ = p20;
+  #ifdef DEFORMATION_2D
+  // Apply complex phase shift if necessary to function value
+  if(function_mode==5.0 || function_mode==6.0) {
+    float s_re = complex_scale.x;
+    float s_im = -complex_scale.y;
+    if(function_mode == 6.0) {
+      s_re = complex_scale.y;
+      s_im = complex_scale.x;
+
+    }
+
+    p00_.w = p00_.w*s_re + vec00_01.x*s_im;
+    p01_.w = p01_.w*s_re + vec00_01.z*s_im;
+    p02_.w = p02_.w*s_re + vec02_10.x*s_im;
+    p10_.w = p10_.w*s_re + vec02_10.z*s_im;
+    p11_.w = p11_.w*s_re + vec11_20.x*s_im;
+    p20_.w = p20_.w*s_re + vec11_20.z*s_im;
+  }
+  #endif
+
+  vec4 du = B00*(p00_-p10_) + B01*(p01_-p11_) + B10*(p10_-p20_);
+  vec4 dv = B00*(p01_-p10_) + B01*(p02_-p11_) + B10*(p11_-p20_);
 
   #ifdef DEFORMATION
     du.x += deformation*du.w;
@@ -242,12 +268,47 @@ vec3 GetNormal(float u, float v)
   float B11 = 6.0*v*w;
   float B20 = 3.0*w*w;
 
-  vec4 du = B00*(p00-p10) + B01*(p01-p11) + B02*(p02-p12) +
-            B10*(p10-p20) + B11*(p11-p21) +
-            B20*(p20-p30);
-  vec4 dv = B00*(p01-p10) + B01*(p02-p11) + B02*(p03-p12) +
-            B10*(p11-p20) + B11*(p12-p21) +
-            B20*(p21-p30);
+  vec4 p00_ = p00;
+  vec4 p01_ = p01;
+  vec4 p02_ = p02;
+  vec4 p03_ = p03;
+  vec4 p10_ = p10;
+  vec4 p11_ = p11;
+  vec4 p12_ = p12;
+  vec4 p20_ = p20;
+  vec4 p21_ = p21;
+  vec4 p30_ = p30;
+
+  #ifdef DEFORMATION_2D
+  // Apply complex phase shift if necessary to function value
+  if(function_mode==5.0 || function_mode==6.0) {
+    float s_re = complex_scale.x;
+    float s_im = -complex_scale.y;
+    if(function_mode == 6.0) {
+      s_re = complex_scale.y;
+      s_im = complex_scale.x;
+
+    }
+
+    p00_.w = p00_.w*s_re + vec00_01.x*s_im;
+    p01_.w = p01_.w*s_re + vec00_01.z*s_im;
+    p02_.w = p02_.w*s_re + vec02_03.x*s_im;
+    p03_.w = p03_.w*s_re + vec02_03.z*s_im;
+    p10_.w = p10_.w*s_re + vec10_11.x*s_im;
+    p11_.w = p11_.w*s_re + vec10_11.z*s_im;
+    p12_.w = p12_.w*s_re + vec12_20.x*s_im;
+    p20_.w = p20_.w*s_re + vec12_20.z*s_im;
+    p21_.w = p21_.w*s_re + vec21_30.x*s_im;
+    p30_.w = p30_.w*s_re + vec21_30.z*s_im;
+  }
+  #endif
+
+  vec4 du = B00*(p00_-p10_) + B01*(p01_-p11_) + B02*(p02_-p12_) +
+            B10*(p10_-p20_) + B11*(p11_-p21_) +
+            B20*(p20_-p30_);
+  vec4 dv = B00*(p01_-p10_) + B01*(p02_-p11_) + B02*(p03_-p12_) +
+            B10*(p11_-p20_) + B11*(p12_-p21_) +
+            B20*(p21_-p30_);
 #ifdef DEFORMATION
   du.x += deformation*du.w;
   dv.x += deformation*dv.w;
