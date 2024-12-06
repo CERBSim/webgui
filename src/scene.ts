@@ -298,11 +298,11 @@ export class Scene extends WebGLScene {
     this.mesh_center = new THREE.Vector3().fromArray(render_data.mesh_center);
     this.mesh_radius = render_data.mesh_radius;
 
-    const version_text = document.createTextNode(
-      'NGSolve ' + render_data.ngsolve_version
-    );
-    this.version_object.innerHTML = '';
-    this.version_object.appendChild(version_text);
+    //const version_text = document.createTextNode(
+    //  'NGSolve ' + render_data.ngsolve_version
+    //);
+    //this.version_object.innerHTML = '';
+    //this.version_object.appendChild(version_text);
 
     // if(window.matchMedia('(prefers-color-scheme: dark)').matches)
     //   this.scene.background = new THREE.Color(0x292c2e);
