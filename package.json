@@ -1,6 +1,6 @@
 {
   "name": "webgui",
-  "version": "0.2.37",
+  "version": "0.2.38",
   "description": "",
   "main": "dist/webgui.js",
   "keywords": [],
