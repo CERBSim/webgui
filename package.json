@@ -10,10 +10,8 @@
     "clean": "rm dist/webgui.js",
     "lint": "yarn format && eslint --ext .js,.ts ./ --fix",
     "format": "prettier --write \"**/*.{js,ts,scss,html,md,json}\"",
-    "build-shaders": "node build_shaders.js",
-    "build-dev": "npm run build-shaders && vite build --mode development",
-    "build": "npm run build-shaders && vite build",
-    "dev": "vite dev"
+    "build": "vite build",
+    "dev": "vite build --watch --mode development"
   },
   "dependencies": {
     "@types/dat.gui": "^0.7.6",
