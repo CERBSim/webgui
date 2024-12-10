@@ -31,7 +31,7 @@ export class Axes extends RenderObject {
   render(data) {
     if (this.update(data)) {
       this.three_object.matrixWorld
-        .makeTranslation(-0.85 * data.controls.aspect, -0.85, 0)
+        .makeTranslation(-0.80 * data.controls.aspect, -0.80, 0)
         .multiply(data.controls.rotmat);
       // console.log('rotmat', data.controls.rotmat.elements);
       data.renderer.render(this.three_object, data.camera);

@@ -46,7 +46,8 @@ export class Label3D extends RenderObject {
     const y = Math.round(((-vector.y + 1) * rect.height) / 2);
     this.element.style.top = `${y}px`;
     this.element.style.left = `${x}px`;
-    if (x < 0 || y < 0 || y > rect.height || x > rect.width)
+    const margin = 10;
+    if (x < margin || y < margin || y > rect.height-margin || x > rect.width-margin)
       this.element.style.display = 'none';
     else this.element.style.display = 'block';
   }
