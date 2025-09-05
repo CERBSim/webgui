@@ -227,7 +227,7 @@ export class LinesObject extends RenderObject {
     );
     const color = this.data.color || 0x000000;
 
-    const material = new THREE.LineBasicMaterial({ color });
+    const material = new THREE.LineBasicMaterial({ color, fog: false });
 
     this.geometry = geo;
     this.three_object = new THREE.LineSegments(geo, material);
