@@ -3,6 +3,14 @@
   "version": "0.2.39",
   "description": "",
   "main": "dist/webgui.js",
+  "module": "dist/webgui.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/webgui.mjs",
+      "default": "./dist/webgui.js"
+    }
+  },
   "keywords": [],
   "author": "",
   "license": "LGPL-2.1-or-later",

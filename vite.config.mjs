@@ -40,8 +40,8 @@ export default defineConfig({
     lib: {
       entry: './src/index.ts',
       name: 'webgui',
-      fileName: () => 'webgui.js',
-      formats: ['iife'],
+      fileName: (format) => format === 'es' ? 'webgui.mjs' : 'webgui.js',
+      formats: ['es', 'iife'],
     },
     minify: true,
     // only watch in dev mode
