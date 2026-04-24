@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { RenderObject } from './render_object';
 
+// @ts-ignore
 import './styles.css';
 
 export class Label3D extends RenderObject {

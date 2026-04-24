@@ -50,6 +50,7 @@ import { CameraControls } from './camera';
 import { Label3D } from './label';
 import { GUI } from './gui';
 
+// @ts-ignore
 import './styles.css';
 
 export { THREE };
@@ -86,7 +87,7 @@ export class Scene extends WebGLScene {
   width: number;
   height: number;
   widthMargin = 6;
-  heightMargin = 6;
+  heightMargin = 10;
   hidden = false;
 
   gui: GUI;

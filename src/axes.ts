@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RenderObject } from './render_object';
 import { Label3D } from './label';
 
+// @ts-ignore
 import './styles.css';
 
 export class Axes extends RenderObject {

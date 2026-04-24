@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { RenderObject } from './render_object';
 
+// @ts-ignore
 import './styles.css';
 
 function makeTexture(colors: Float32Array) {
@@ -105,7 +106,6 @@ function makeColormapTexture(n_colors) {
 }
 
 export class Colorbar extends RenderObject {
-  three_object: THREE.Object3D;
   mesh_material;
   mesh_only: boolean;
   labels;
