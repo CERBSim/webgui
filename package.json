@@ -19,6 +19,7 @@
     "three": "^0.152.2"
   },
   "devDependencies": {
+    "@types/minimatch": "^6.0.0",
     "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.1.0",
     "prettier": "^2.2.1",
