@@ -188,7 +188,7 @@ export class WireframeObject extends RenderObject {
     this.three_object = new THREE.Line(geo, wireframe_material);
     this.three_object.matrixWorldAutoUpdate = false;
     this.geometry = geo;
-    this.name = 'Wireframe';
+    this.name = 'Mesh';
   }
 
   render(data) {
