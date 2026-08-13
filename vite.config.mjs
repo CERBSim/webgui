@@ -29,6 +29,9 @@ export default defineConfig({
   plugins: [
     {
       name: 'watch-external',
+      // must run before vite-plugin-dts (enforce: 'pre'), which snapshots the
+      // TS program in buildStart and would not see the generated shaders.ts
+      enforce: 'pre',
       async buildStart() {
         buildShaders(this);
       },
